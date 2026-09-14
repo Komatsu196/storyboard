@@ -32,7 +32,7 @@ Cloudflare D1（SQLite）… projects / scenes / shots / sketches
 | T-005 | API は Hono ＋ zod、クライアントは Hono RPC ＋ TanStack Query |
 | T-006 | 消しゴムはストローク単位。キャンバスは Canvas 2D ＋ Pointer Events で自作 |
 | T-007 | 並べ替えは「前へ / 後へ」ボタン。DnD なし |
-| T-008 | テストは純粋ロジックのユニット＋API 結合（vitest-pool-workers） |
+| T-008 | テストは純粋ロジックのユニット＋API 結合（@cloudflare/vitest-plugin） |
 | T-009 | `vite dev` 一本のローカル開発、手動デプロイ、CI なし |
 | T-010 | apps/web 1パッケージ内を src/ server/ shared/ に分ける |
 | T-011 | スケッチもカット情報も同じ自動保存。保存ボタンなし |
@@ -164,9 +164,9 @@ type ProjectDetail = Project & {
 - Secret（`wrangler secret put` / ローカルは `.dev.vars`）:
   - `PASSWORD_HASH` — `pbkdf2$<iterations>$<salt b64url>$<hash b64url>`。README に生成コマンド（Node の `crypto.pbkdf2Sync` ワンライナー）を書く。
   - `SESSION_SECRET` — HMAC-SHA256 の鍵（32 バイト以上のランダム文字列）。
-- `POST /api/login`: 入力パスワードを同じ salt・iterations で PBKDF2 し、タイミング安全に比較。成功したら `session=<exp>.<b64url(HMAC(exp))>` を発行。`exp` は unix 秒（90 日後）。
-- Cookie 属性: `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=7776000`。localhost は secure context 扱いなのでローカル開発でも `Secure` のままでよい。
-- ミドルウェア: Cookie を分解し `crypto.subtle.verify` で署名検証、`exp > now` を確認。失敗は 401。
+- `POST /api/login`: 入力パスワードを同じ salt・iterations で PBKDF2 し、タイミング安全に比較。成功したら Hono 組み込みの署名付き Cookie（`hono/cookie` の `setSignedCookie`。値は有効期限の unix 秒、署名は HMAC-SHA256）を発行する。署名の自前実装はしない。
+- Cookie 属性: `HttpOnly; SameSite=Lax; Path=/; Max-Age=7776000`。`Secure` はリクエストが https のときだけ付ける（ローカルの http://localhost で Safari が Secure Cookie を拒否するため）。
+- ミドルウェア: `getSignedCookie` で署名を検証し、`exp > now` を確認。失敗は 401。
 - CSRF: 同一オリジン（T-001）＋ `SameSite=Lax` ＋ 状態変更は JSON ボディの POST/PUT/PATCH/DELETE のみ、で足りる。ログイン試行のレート制限は付けない（単一ユーザー・低リスクと判断。必要なら失敗時に 500ms 待つ程度）。
 
 ## 5. SPA
@@ -286,18 +286,22 @@ apps/web/
   vite.config.ts
   vitest.config.ts
   drizzle.config.ts
-  tsconfig.json            src/ + shared/（lib: DOM）
-  tsconfig.server.json     server/ + shared/（worker-configuration.d.ts）
+  tsconfig.json            src/ + shared/（lib: DOM）。tsconfig.server.json を project reference で参照
+  tsconfig.server.json     server/ + shared/（composite。型定義を .tsbuild/ に出力し、SPA 側はそれ経由で AppType を読む）
   biome.json
   .dev.vars                git 管理外。PASSWORD_HASH / SESSION_SECRET
+  worker-configuration.d.ts  git 管理外。`wrangler types` が生成（postinstall と check で再生成）
+  scripts/hash-password.mjs  PASSWORD_HASH を作るワンライナー
   drizzle/                 マイグレーション SQL（drizzle-kit generate の出力）
   shared/
     schemas.ts
     sketch/{types,simplify,hitTest,history}.ts ＋ *.test.ts
   server/
-    index.ts               export default { fetch }（createApp を env で組み立て）
+    index.ts               export default { fetch }
     app.ts                 createApp(): Hono ルート群。AppType を export
-    auth.ts                PBKDF2 照合・Cookie 発行/検証・ミドルウェア
+    auth.ts                PBKDF2 照合・署名付き Cookie の発行/検証・ミドルウェア
+    env.d.ts               Secret（PASSWORD_HASH / SESSION_SECRET）の型を Cloudflare.Env に足す
+    test/                  API テストの setup（マイグレーション適用・各テスト前の全削除）
     routes/{projects,scenes,shots}.ts
     db/schema.ts           Drizzle スキーマ
     db/index.ts            drizzle(env.DB, { schema })
@@ -350,10 +354,11 @@ export default defineConfig({
 
 ### 8.3 vitest.config.ts
 
-2 プロジェクト構成:
+Vitest 4 ＋ `@cloudflare/vitest-plugin`（旧 `@cloudflare/vitest-pool-workers` の後継。Vitest 5 には未対応なので Vitest は `^4.1`）。`vitest.config.ts` は `test.projects` で2つの設定ファイルを束ねる。
 
-- `unit`: `environment: 'node'`、対象 `shared/**/*.test.ts` と `server/**/*.test.ts`（`*.api.test.ts` を除く）。
-- `api`: `@cloudflare/vitest-pool-workers` の `defineWorkersProject`。`wrangler.configPath: './wrangler.jsonc'` でローカル D1 バインディングを用意し、`readD1Migrations('./drizzle')` を `miniflare.bindings.TEST_MIGRATIONS` に渡し、`setupFiles` で `applyD1Migrations(env.DB, env.TEST_MIGRATIONS)`。対象 `server/**/*.api.test.ts`。テストは `createApp()` に対して `app.request(path, init, env)` でリクエストを送る（ログインして得た Cookie を付ける）。
+- `vitest.unit.config.ts`（`unit`）: `environment: 'node'`、対象 `shared/**/*.test.ts` と `server/**/*.test.ts`（`*.api.test.ts` を除く）。
+- `vitest.api.config.ts`（`api`）: `cloudflareTest()` プラグイン。wrangler.jsonc は読まず `miniflare` オプションで直接 D1（`d1Databases: { DB }`）とテスト用バインディング（`TEST_MIGRATIONS`、テスト用の `PASSWORD_HASH`・`SESSION_SECRET`）を与える。`readD1Migrations('./drizzle')` の結果を `setupFiles` の `applyD1Migrations(env.DB, env.TEST_MIGRATIONS)` で適用。対象 `server/**/*.api.test.ts`。テストは `createApp()` に対して `app.request(path, init, env)`（`env` は `cloudflare:workers` から import）でリクエストを送る。
+- ストレージの分離は**テストファイル単位**（テスト単位ではない）。`setupFiles` の `beforeEach` で `delete from projects` を流し、各テストを空の DB から始める（cascade で子も消える）。
 
 ### 8.4 drizzle.config.ts
 
@@ -369,17 +374,17 @@ export default defineConfig({ dialect: 'sqlite', schema: './server/db/schema.ts'
 | --- | --- |
 | `dev` | `vite dev` |
 | `build` | `vite build` |
-| `deploy` | `pnpm build && wrangler deploy`（実行前に `db:migrate:remote` を手で流す） |
+| `deploy` | `pnpm build && wrangler deploy`（`pnpm deploy` は pnpm 自身のコマンドと衝突するので **必ず `pnpm run deploy`** で呼ぶ。実行前に `db:migrate:remote` を手で流す） |
 | `test` | `vitest run` |
-| `check` | `biome check && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit` |
-| `types` | `wrangler types`（`worker-configuration.d.ts` を生成） |
+| `check` | `wrangler types && biome check && tsc -b tsconfig.json`（project reference で server → client の順に型検査） |
+| `types` | `wrangler types`（`worker-configuration.d.ts` を生成。`postinstall` でも実行） |
 | `db:generate` | `drizzle-kit generate` |
 | `db:migrate:local` | `wrangler d1 migrations apply storyboard --local` |
 | `db:migrate:remote` | `wrangler d1 migrations apply storyboard --remote` |
 
 ### 8.6 依存の入れ替え
 
-- 追加: `hono` `@hono/zod-validator` `zod` `@tanstack/react-query` `@tanstack/router-plugin` `vitest` `@cloudflare/vitest-pool-workers` `@cloudflare/workers-types`（または `wrangler types` の生成物のみ）
+- 追加: `hono` `@hono/zod-validator` `zod` `@tanstack/react-query` `@tanstack/router-plugin` `vitest@^4.1` `@cloudflare/vitest-plugin`（Worker の型は `wrangler types` の生成物を使い、`@cloudflare/workers-types` は入れない）
 - 削除: `@tanstack/react-start` `mysql2` `dotenv` `tsx` `@tanstack/devtools-vite` `@tanstack/react-devtools` `@tanstack/react-router-devtools` `@tanstack/router-cli`、および `src/routes/demo/*` `src/db/*` `src/components/{Header,Footer,ThemeToggle}.tsx`（必要なら作り直す）`.cta.json` `public/drizzle.svg`
 - 維持: `react` `react-dom` `@tanstack/react-router` `drizzle-orm` `drizzle-kit` `tailwindcss` `@tailwindcss/vite` `@biomejs/biome` `@cloudflare/vite-plugin` `wrangler` `vite` `@vitejs/plugin-react` `typescript`
 - Biome の `files.includes` に `server/**` `shared/**` を加える。
@@ -389,7 +394,7 @@ export default defineConfig({ dialect: 'sqlite', schema: './server/db/schema.ts'
 | 種類 | 対象 | 方法 |
 | --- | --- | --- |
 | ユニット | `shared/sketch/*`（間引き・当たり判定・履歴）、`server/numbering.ts`（採番・position 振り直し）、`shared/schemas.ts`（境界値） | Vitest `unit` プロジェクト。TDD で書く |
-| API 結合 | 認証（login/logout/未認証 401）、作品・シーン・カットの CRUD、並べ替え（不正な ids は 400）、スケッチ upsert、cascade 削除、`GET /api/projects/:id` の形 | Vitest `api` プロジェクト（Worker 内・ローカル D1） |
+| API 結合 | 認証（login/logout/未認証 401）、作品・シーン・カットの CRUD、並べ替え（不正な ids は 400）、スケッチ upsert、cascade 削除、`GET /api/projects/:id` の形 | Vitest `api` プロジェクト（`@cloudflare/vitest-plugin`、Worker 内・ローカル D1） |
 | 手動 | キャンバスの描き味（スマホの指・PC のペンタブ）、レイアウト、自動保存の体感 | 実機。② スケッチの段階で最初に確認 |
 
 React コンポーネントテスト・ブラウザ E2E は書かない。`pnpm check && pnpm test` をコミット前のゲートにする。
@@ -404,13 +409,16 @@ React コンポーネントテスト・ブラウザ E2E は書かない。`pnpm 
 | 10/7 | ④ 構成操作 | 作品・シーンの編集・削除、並べ替え（前へ / 後へ、楽観的更新）、番号の手動編集、アスペクト比変更 | 構成の組み替えがアプリ内で完結する |
 | 10/14 | ⑤ 仕上げ | 実戦で使いながらの修正の余白 | 自分の1本で使い始められる |
 
-## 11. ① 基盤で確認する事項
+## 11. 検証済みの事項（2026-09-14、使い捨てのプロトタイプで確認）
 
-設計時点で手元のパッケージ（wrangler 4.131 / @cloudflare/vite-plugin 1.54）と整合を確認済みだが、実装の最初に次を動かして確かめる。
-
-- `@cloudflare/vite-plugin` が `assets.directory` なしでクライアント出力を配信すること（`vite build` → `dist/` に生成される wrangler 設定を確認）。
-- `@cloudflare/vitest-pool-workers` が現行の Vite / Vitest と同時に動くこと（動かない場合は Vitest のバージョンを pool 側に合わせる）。
-- `run_worker_first: ["/api/*"]` で `/api` 以外が Worker を経由しないこと（ローカル・本番とも）。
+- `@cloudflare/vite-plugin` 1.54 は `assets.directory` なしで動く。`vite build` が `dist/client`（SPA）と `dist/storyboard/`（Worker ＋ `wrangler.json`、`assets.directory: "../client"`）を出力し、`.wrangler/deploy/config.json` を書くので、`wrangler deploy` はそれを自動で読む。
+- `run_worker_first: ["/api/*"]` ＋ `not_found_handling: "single-page-application"` で、`/` と `/projects/abc` は SPA の HTML、`/api/*` は Hono に届く（`vite dev` で確認）。
+- `wrangler d1 migrations apply storyboard --local` の結果は `vite dev` の Worker から見える（`.wrangler/state` を共有）。
+- `@cloudflare/vitest-plugin` 1.1 ＋ Vitest 4.1 で、`unit`（node）と `api`（workerd ＋ D1）の2プロジェクトが `vitest run` 一発で動く。API テストから `app.request()` でログイン → Cookie 付きリクエストが通る。
+- Hono の `setSignedCookie` / `getSignedCookie` が HMAC 署名付き Cookie として動く。
+- TypeScript の project reference（`tsc -b`）で、SPA 側が `import type { AppType } from "../../server/app"` しても Worker の型（`Env` など）が SPA の型検査に漏れない。
+- ブラウザで `/` → `/login?redirect=%2F` へのリダイレクト、ログイン → `/`、ログアウト → `/login` が動く。
+- SPA と Worker の間の import は相対パスで書く（tsconfig の `paths` は Vite と Vitest の両方に設定が要るため使わない）。
 
 ## 12. やらないこと（再掲）
 

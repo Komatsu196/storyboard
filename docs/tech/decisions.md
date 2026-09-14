@@ -18,7 +18,7 @@
 | T-005 | API は Hono ＋ zod、クライアントは Hono RPC（hono/client）＋ TanStack Query | 決定 | 2026-09-14 |
 | T-006 | 消しゴムはストローク単位（一筆ごと消す）。キャンバスは Canvas 2D ＋ Pointer Events で自作 | 決定 | 2026-09-14 |
 | T-007 | 並べ替えは「前へ / 後へ」ボタン。DnD ライブラリは入れない                | 決定 | 2026-09-14 |
-| T-008 | テストは Vitest で「純粋ロジックのユニット」＋「API の結合（vitest-pool-workers）」。E2E・コンポーネントテストはなし | 決定 | 2026-09-14 |
+| T-008 | テストは Vitest で「純粋ロジックのユニット」＋「API の結合（Workers ランタイム内）」。E2E・コンポーネントテストはなし | 決定 | 2026-09-14 |
 | T-009 | ローカル開発は @cloudflare/vite-plugin の `vite dev` 一本、デプロイは手動。CI なし | 決定 | 2026-09-14 |
 | T-010 | リポジトリは apps/web の1パッケージ。src/（SPA）server/（Hono）shared/（共有）に分ける | 決定 | 2026-09-14 |
 | T-011 | スケッチもカット情報も同じ自動保存（デバウンス＋離脱時 flush）。保存ボタンは置かない | 決定 | 2026-09-14 |
@@ -63,7 +63,8 @@
 - **背景**: 技術設計 Q4「自分だけが使えるログインをどう実現するか」への回答。選択肢は「アプリ内パスワード＋署名付き Cookie / Cloudflare Access / パスキー」。Access はコードゼロだがローカル開発でコードパスが変わり設定がリポジトリ外に残る、パスキーは MVP には過剰、という理由で最小のアプリ内実装を選んだ（D-001, D-006）。
 - **含意**:
   - ユーザーテーブルは作らない。「ログイン済みか」だけを扱い、ユーザー ID の概念はデータモデルに持ち込まない（複数ユーザー化は D-001 で対象外）。
-  - パスワード照合はハッシュ（PBKDF2、Web Crypto で実装可）に対して行い、比較はタイミング安全にする。Secret 名: `PASSWORD_HASH`（またはソルト込みの1文字列）、`SESSION_SECRET`。
+  - パスワード照合はハッシュ（PBKDF2、Web Crypto で実装可）に対して行い、比較はタイミング安全にする。Secret 名: `PASSWORD_HASH`（ソルト込みの1文字列）、`SESSION_SECRET`。
+  - 補足（同日）: Cookie の署名・検証は Hono 組み込みの `setSignedCookie` / `getSignedCookie`（HMAC-SHA256）を使い、自前実装しない。
   - SPA 側は 401 を受けたらログイン画面へ遷移する。ログイン画面はパスワード欄1つだけ。ログアウトは Cookie を消す `POST /api/logout`。
   - ローカル開発では `.dev.vars` に同じ Secret を置き、本番と同じコードで動かす。
   - T-001（同一オリジン）により CSRF 対策は SameSite=Lax と「状態変更は JSON ボディの POST/PUT/DELETE のみ」で足りる。
@@ -104,7 +105,8 @@
 - **含意**:
   - 描画関連のロジックは Canvas / DOM に依存しない純粋関数として `sketch/` に切り出す（描画関数だけが `CanvasRenderingContext2D` を受け取る）。
   - API 結合テストのため、DB アクセスは `env.DB` を引数で受ける形にし、テストからも本番からも同じ Hono アプリを `app.request()` で叩ける構造にする。
-  - Vitest の設定は2プロジェクト（`node` 環境のユニット / `workers` プールの API）に分ける。
+  - Vitest の設定は2プロジェクト（`node` 環境のユニット / Workers ランタイムの API）に分ける。
+  - 補足（同日）: `@cloudflare/vitest-pool-workers` は Vitest 4 対応で `@cloudflare/vitest-plugin` に置き換わっていたので、そちらを使う（Vitest は `^4.1`）。ストレージの分離はテストファイル単位なので、各テスト前に DB を空にする。
   - `pnpm test` を CI 相当のゲートとして、コミット前に通す。
 
 ## T-009: ローカル開発は @cloudflare/vite-plugin の `vite dev` 一本、デプロイは手動。CI なし
