@@ -30,7 +30,7 @@ function LoginPage() {
 				setFailed(true);
 				return;
 			}
-			await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey });
+			queryClient.removeQueries({ queryKey: sessionQuery.queryKey });
 			await navigate({ href: redirect ?? "/" });
 		},
 	});
