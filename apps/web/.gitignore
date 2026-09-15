@@ -11,3 +11,8 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+.dev.vars
+.tsbuild
+worker-configuration.d.ts
+tsconfig.tsbuildinfo
