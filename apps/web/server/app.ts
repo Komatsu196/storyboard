@@ -1,4 +1,12 @@
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { z } from "zod";
+import {
+	endSession,
+	requireSession,
+	startSession,
+	verifyPassword,
+} from "./auth";
 
 export function createApp() {
 	const app = new Hono<{ Bindings: Env }>().basePath("/api");
@@ -9,7 +17,28 @@ export function createApp() {
 	});
 	app.notFound((c) => c.json({ error: "not_found" }, 404));
 
-	return app;
+	const routes = app
+		.post(
+			"/login",
+			zValidator("json", z.object({ password: z.string() })),
+			async (c) => {
+				const { password } = c.req.valid("json");
+				if (!(await verifyPassword(password, c.env.PASSWORD_HASH))) {
+					return c.json({ error: "unauthorized" }, 401);
+				}
+				await startSession(c, c.env.SESSION_SECRET);
+				return c.body(null, 204);
+			},
+		)
+		// ここから下のルートはすべてログイン必須
+		.use("/*", requireSession)
+		.post("/logout", (c) => {
+			endSession(c);
+			return c.body(null, 204);
+		})
+		.get("/session", (c) => c.json({ ok: true }));
+
+	return routes;
 }
 
 export type AppType = ReturnType<typeof createApp>;
