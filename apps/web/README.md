@@ -39,6 +39,7 @@ pnpm dev                # http://localhost:3000
 ```bash
 pnpm exec wrangler login                       # ブラウザで Cloudflare にログイン
 pnpm exec wrangler d1 create storyboard        # 出力の database_id を wrangler.jsonc に貼る
+pnpm db:migrate:local                          # database_id を変えるとローカル D1 も別ファイルになるので再適用
 pnpm db:migrate:remote
 node scripts/hash-password.mjs "本番のパスワード" | pnpm exec wrangler secret put PASSWORD_HASH
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))" | pnpm exec wrangler secret put SESSION_SECRET
