@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 
 // テスト用パスワード "test-password" の PBKDF2 ハッシュ（server/auth.ts と同じ形式）
 function testPasswordHash(): string {
-	const iterations = 1000;
+	const iterations = 100_000;
 	const salt = randomBytes(16);
 	const hash = pbkdf2Sync("test-password", salt, iterations, 32, "sha256");
 	return `pbkdf2$${iterations}$${salt.toString("base64url")}$${hash.toString("base64url")}`;
