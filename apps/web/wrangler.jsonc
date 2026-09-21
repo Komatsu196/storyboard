@@ -11,7 +11,7 @@
 		{
 			"binding": "DB",
 			"database_name": "storyboard",
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "ac0fe4c9-1b25-4443-9570-e6073badcc1d",
 			"migrations_dir": "drizzle"
 		}
 	]
