@@ -14,7 +14,7 @@ import {
 	type StrokeColor,
 	type StrokeSize,
 } from "../../shared/sketch/types";
-import { displayColor, renderStrokes } from "./render";
+import { displayColor, renderStroke, renderStrokes } from "./render";
 import type { Tool } from "./useSketchEditor";
 
 type Props = {
@@ -63,7 +63,7 @@ export function SketchCanvas({
 	useLayoutEffect(() => {
 		const area = areaRef.current;
 		if (!area) return;
-		const fit = () => {
+		const fitToArea = () => {
 			const { width, height } = area.getBoundingClientRect();
 			const w = Math.max(
 				0,
@@ -71,9 +71,9 @@ export function SketchCanvas({
 			);
 			setSize({ w, h: Math.floor((w * sketch.h) / sketch.w) });
 		};
-		const observer = new ResizeObserver(fit);
+		const observer = new ResizeObserver(fitToArea);
 		observer.observe(area);
-		fit();
+		fitToArea();
 		return () => observer.disconnect();
 	}, [sketch.w, sketch.h]);
 
@@ -88,11 +88,25 @@ export function SketchCanvas({
 			canvas.height = ph;
 			canvas.getContext("2d")?.setTransform(dpr, 0, 0, dpr, 0, 0);
 		}
+		// リサイズ（回転など）でも live 層が消えたままにならないよう、描きかけのペンを新しい scale で描き直す
+		const g = gestureRef.current;
+		if (size.w > 0 && g?.kind === "pen") {
+			const liveCtx = liveRef.current?.getContext("2d");
+			if (liveCtx) {
+				liveCtx.lineCap = "round";
+				liveCtx.lineJoin = "round";
+				renderStroke(
+					liveCtx,
+					{ color: g.color, size: g.size, p: g.points },
+					scale,
+				);
+			}
+		}
 		const ctx = baseRef.current?.getContext("2d");
 		if (!ctx || size.w === 0) return;
 		ctx.clearRect(0, 0, size.w, size.h);
-		renderStrokes(ctx, sketch, size.w / sketch.w);
-	}, [sketch, size]);
+		renderStrokes(ctx, sketch, scale);
+	}, [sketch, size, scale]);
 
 	// CSS px → 論理座標（端末に依存しない。設計書 §6.2）
 	const toLogical = (
