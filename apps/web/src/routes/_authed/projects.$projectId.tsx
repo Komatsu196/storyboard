@@ -1,26 +1,31 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { projectQuery } from "../../api/client";
+import {
+	createFileRoute,
+	type ErrorComponentProps,
+	Outlet,
+} from "@tanstack/react-router";
+import { NotFoundError, projectQuery } from "../../api/client";
+import { NotFound } from "../../components/NotFound";
 
+// 作品ページとカット編集の親。作品を 1 回読んでキャッシュに置き、子は useSuspenseQuery で読む
 export const Route = createFileRoute("/_authed/projects/$projectId")({
 	loader: ({ context, params }) =>
 		context.queryClient.ensureQueryData(projectQuery(params.projectId)),
-	component: ProjectPage,
+	errorComponent: ProjectError,
+	component: () => <Outlet />,
 });
 
-// Task 8 でレイアウトルート（Outlet）に置き換える
-function ProjectPage() {
-	const { projectId } = Route.useParams();
-	const { data: project } = useSuspenseQuery(projectQuery(projectId));
+function ProjectError({ error }: ErrorComponentProps) {
+	if (error instanceof NotFoundError) return <NotFound />;
 	return (
 		<main className="p-4">
-			<Link to="/" className="text-sm underline">
-				← 作品一覧
-			</Link>
-			<h1 className="mt-2 font-bold text-xl">{project.title}</h1>
-			<p className="text-gray-500">
-				{project.aspectRatio}（作品ページは次のタスクで作る）
-			</p>
+			<p>読み込みに失敗しました</p>
+			<button
+				type="button"
+				onClick={() => location.reload()}
+				className="mt-2 underline"
+			>
+				再読み込み
+			</button>
 		</main>
 	);
 }
