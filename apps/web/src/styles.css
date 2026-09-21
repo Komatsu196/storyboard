@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* 描画中の引っ張り更新・ゴム戻りを止める（設計書 §6.3。キャンバスの外は通常どおりスクロールできる） */
+@layer base {
+	html,
+	body {
+		overscroll-behavior: none;
+	}
+}
