@@ -97,6 +97,11 @@ function ProjectPage() {
 					</button>
 				)}
 			</div>
+			{(addScene.isError || addShot.isError) && (
+				<p className="mt-2 text-red-600 text-sm">
+					作成に失敗しました。もう一度試してください。
+				</p>
+			)}
 
 			{/* スマホ用: 画面下に固定の「＋カット」（最後のシーンに追加。シーンが無ければ作る） */}
 			<button
