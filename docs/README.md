@@ -11,11 +11,12 @@
 
 - [decisions.md](./tech/decisions.md) — 技術決定事項ログ。アーキテクチャ・DB・認証などを T-001 から順に、背景と含意つきで記録。
 
-## superpowers/specs/ — 設計書
+## superpowers/ — 設計書・実装計画（git 管理外）
 
-- [2026-09-14-storyboard-mvp-tech-design.md](./superpowers/specs/2026-09-14-storyboard-mvp-tech-design.md) — MVP の技術設計書。T-001〜T-011 を統合したもの。実装はこれに従う。
+- `superpowers/specs/` の設計書と `superpowers/plans/` の実装計画は superpowers（Claude Code のスキル）の生成物として `.gitignore` で git 管理外にしている。手元にだけ置く。
+- リポジトリに残す正式な記録は `product/decisions.md` と `tech/decisions.md`（設計書は T-001〜T-011 を統合したもの）。
 
 ## 運用ルール
 
 - 方向性に関わる決定は `product/decisions.md` に追記し、`overview.md` を追従させる。
-- 技術に関わる決定は `tech/decisions.md` に追記し、設計書（`superpowers/specs/`）を追従させる。
+- 技術に関わる決定は `tech/decisions.md` に追記し、設計書（`superpowers/specs/`、git 管理外）を追従させる。

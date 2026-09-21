@@ -78,5 +78,5 @@
 
 ## 次のステップ
 
-1. ~~技術設計~~ — 完了（2026-09-14）。[技術決定事項ログ](../tech/decisions.md) T-001〜T-011 と [設計書](../superpowers/specs/2026-09-14-storyboard-mvp-tech-design.md) を参照。要点: 1 Worker に SPA ＋ Hono API、D1 のみ、スケッチはストローク JSON（サムネイルはクライアント描画、PNG/R2 なし）、パスワード＋署名付き Cookie。
+1. ~~技術設計~~ — 完了（2026-09-14）。[技術決定事項ログ](../tech/decisions.md) T-001〜T-011 と設計書（`docs/superpowers/specs/`、git 管理外）を参照。要点: 1 Worker に SPA ＋ Hono API、D1 のみ、スケッチはストローク JSON（サムネイルはクライアント描画、PNG/R2 なし）、パスワード＋署名付き Cookie。
 2. **実装計画** — 設計書からタスクに分解し、スケッチキャンバスから着手する。
