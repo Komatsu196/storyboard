@@ -1,10 +1,18 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { toAspectRatio } from "../../../shared/schemas";
-import { emptySketch } from "../../../shared/sketch/types";
-import { type ProjectDetail, projectQuery, type Shot } from "../../api/client";
+import { emptySketch, type SketchData } from "../../../shared/sketch/types";
+import { setShotSketch } from "../../api/cache";
+import {
+	type ProjectDetail,
+	projectQuery,
+	putSketch,
+	type Shot,
+} from "../../api/client";
+import type { SaveStatus } from "../../components/autosaver";
 import { NotFound } from "../../components/NotFound";
+import { useAutosave } from "../../components/useAutosave";
 import { SketchCanvas } from "../../sketch/SketchCanvas";
 import { Toolbar } from "../../sketch/Toolbar";
 import { useSketchEditor } from "../../sketch/useSketchEditor";
@@ -14,6 +22,12 @@ export const Route = createFileRoute(
 )({
 	component: ShotEditorPage,
 });
+
+const statusLabels: Record<SaveStatus, string> = {
+	saved: "保存済み",
+	saving: "保存中…",
+	unsaved: "未保存",
+};
 
 function ShotEditorPage() {
 	const { projectId, shotId } = Route.useParams();
@@ -27,11 +41,27 @@ function ShotEditorPage() {
 }
 
 function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
+	const queryClient = useQueryClient();
 	// 初期データはキャッシュから（追加リクエストなし。設計書 §6.4）。開いた後のキャッシュ更新では作り直さない
 	const [initial] = useState(
 		() => shot.sketch ?? emptySketch(toAspectRatio(project.aspectRatio)),
 	);
 	const editor = useSketchEditor(initial);
+
+	const save = useCallback(
+		async (data: SketchData, opts: { keepalive: boolean }) => {
+			await putSketch(shot.id, data, opts);
+			// 保存完了後にも書く（保存中に再取得が走って古いデータに戻された場合の保険）
+			setShotSketch(queryClient, project.id, shot.id, data);
+		},
+		[queryClient, project.id, shot.id],
+	);
+	const { status } = useAutosave(editor.committed, save, { delay: 800 });
+
+	// ストロークが確定するたびにキャッシュへ書き、作品ページに戻ったときサムネイルが最新になるようにする（設計書 §5.2）
+	useEffect(() => {
+		setShotSketch(queryClient, project.id, shot.id, editor.committed);
+	}, [queryClient, project.id, shot.id, editor.committed]);
 
 	return (
 		<div className="flex min-h-dvh flex-col md:flex-row">
@@ -46,6 +76,11 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 						← {project.title}
 					</Link>
 					<span className="shrink-0 font-bold">C{shot.number}</span>
+					<span
+						className={`shrink-0 text-xs ${status === "unsaved" ? "text-red-600" : "text-gray-500"}`}
+					>
+						{statusLabels[status]}
+					</span>
 					<span className="flex-1" />
 					<HeaderButton
 						label="戻す"
