@@ -50,6 +50,7 @@ export function ShotForm({ fields, onChange, onBlur }: Props) {
 					<input
 						value={fields.number}
 						onChange={(e) => set("number", e.target.value)}
+						maxLength={20}
 						aria-label="カット番号"
 						aria-invalid={numberEmpty}
 						className={`${inputClass} ${numberEmpty ? "border-red-500" : ""}`}
@@ -99,6 +100,7 @@ export function ShotForm({ fields, onChange, onBlur }: Props) {
 				<input
 					value={fields.cameraMove}
 					onChange={(e) => set("cameraMove", e.target.value)}
+					maxLength={100}
 					aria-label="カメラの動き"
 					placeholder="自由入力（Dolly in など）"
 					className={inputClass}
@@ -167,6 +169,7 @@ function GrowingTextarea({
 		<textarea
 			ref={ref}
 			rows={2}
+			maxLength={2000}
 			value={value}
 			onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
 				fitHeight(e.target);

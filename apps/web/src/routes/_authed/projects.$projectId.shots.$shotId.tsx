@@ -97,10 +97,11 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		delay: 1500,
 		equals: shotFieldsEqual,
 	});
-	// 入力のたびにキャッシュへ書き、作品ページに戻ったとき即反映する
+	// 入力のたびにキャッシュへ書き、作品ページに戻ったとき即反映する。番号が空のあいだは書かない（保存されない値をカードに映さない）
 	useEffect(() => {
+		if (numberEmpty) return;
 		setShotFields(queryClient, project.id, shot.id, fields);
-	}, [queryClient, project.id, shot.id, fields]);
+	}, [queryClient, project.id, shot.id, fields, numberEmpty]);
 
 	const status: SaveStatus = numberEmpty
 		? "unsaved"

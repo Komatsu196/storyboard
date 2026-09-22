@@ -36,7 +36,7 @@ export function Toolbar({
 	});
 	return (
 		<div
-			className="flex shrink-0 items-center gap-1 border-t bg-white p-1"
+			className="flex shrink-0 items-center gap-1 border-t bg-white p-1 md:pb-[max(0.25rem,env(safe-area-inset-bottom))]"
 			role="toolbar"
 			aria-label="ツール"
 		>

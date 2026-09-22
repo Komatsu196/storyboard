@@ -17,8 +17,8 @@ export type Autosaver<T> = {
 const DEFAULT_RETRY_DELAYS = [1000, 2000, 4000];
 
 /**
- * 自動保存の純粋ロジック（T-011、設計書 §5.3）。値の比較は参照（===）で、
- * 保存に成功した値と同じ参照に戻れば「保存済み」になる。失敗は retryDelays で再試行し、
+ * 自動保存の純粋ロジック（T-011、設計書 §5.3）。値の比較は equals コールバック（既定は参照 ===）で行い、
+ * 保存に成功した値と等しくなれば「保存済み」になる。失敗は retryDelays で再試行し、
  * 尽きたら次の set まで待つ。ローカルの値は捨てない。
  */
 export function createAutosaver<T>(options: {

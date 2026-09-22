@@ -112,13 +112,13 @@ export async function createShot(sceneId: string): Promise<Shot> {
 	return res.json();
 }
 
-/** keepalive の fetch は本文 64KB までなので、大きいスケッチは通常送信に落とす */
+/** keepalive の fetch は本文 64KB までをカット情報の PATCH と共有するので、大きいスケッチは通常送信に落とす */
 export async function putSketch(
 	shotId: string,
 	data: SketchData,
 	opts: { keepalive: boolean },
 ): Promise<void> {
-	const keepalive = opts.keepalive && JSON.stringify(data).length < 60_000;
+	const keepalive = opts.keepalive && JSON.stringify(data).length < 54_000;
 	const res = await api.shots[":id"].sketch.$put(
 		{ param: { id: shotId }, json: data },
 		{ init: { keepalive } },
