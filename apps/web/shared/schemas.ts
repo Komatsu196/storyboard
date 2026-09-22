@@ -21,3 +21,69 @@ export const createProjectSchema = z.object({
 export const createSceneSchema = z.object({
 	title: z.string().trim().max(200).default(""),
 });
+
+// カットの固定リスト（D-007）。フォームのチップもここから生成する
+export const shotSizes = ["LS", "FS", "MS", "BS", "CU", "ECU"] as const;
+export type ShotSize = (typeof shotSizes)[number];
+export const cameraMoves = [
+	"Fix",
+	"Pan",
+	"Tilt",
+	"Dolly",
+	"Handheld",
+	"Gimbal",
+] as const;
+
+/** カット情報のうち画（スケッチ）を除く 7 項目。フォームの状態と PATCH の本文がこの形（設計書 §4・§6.5） */
+export const shotFieldsSchema = z.object({
+	number: z.string().trim().min(1).max(20),
+	shotSize: z.enum(shotSizes).nullable(),
+	// チップの値も自由入力も同じ 1 列
+	cameraMove: z.string().trim().max(100),
+	// 複数行は trim しない
+	action: z.string().max(2000),
+	dialogue: z.string().max(2000),
+	durationSec: z.number().nonnegative().nullable(),
+	notes: z.string().max(2000),
+});
+export type ShotFields = z.infer<typeof shotFieldsSchema>;
+export const shotFieldKeys = Object.keys(
+	shotFieldsSchema.shape,
+) as (keyof ShotFields)[];
+
+/** PATCH /api/shots/:id の本文。送られた項目だけ更新する */
+export const updateShotSchema = shotFieldsSchema.partial();
+export type UpdateShot = z.infer<typeof updateShotSchema>;
+
+/** DB の text 列など型の保証がない値を ShotSize に寄せる（未知の値・null は null） */
+export function toShotSize(value: string | null): ShotSize | null {
+	return value !== null && (shotSizes as readonly string[]).includes(value)
+		? (value as ShotSize)
+		: null;
+}
+
+/** カット行から 7 項目を取り出す（フォームの初期値・キャッシュ更新に使う） */
+export function pickShotFields(shot: {
+	number: string;
+	shotSize: string | null;
+	cameraMove: string;
+	action: string;
+	dialogue: string;
+	durationSec: number | null;
+	notes: string;
+}): ShotFields {
+	return {
+		number: shot.number,
+		shotSize: toShotSize(shot.shotSize),
+		cameraMove: shot.cameraMove,
+		action: shot.action,
+		dialogue: shot.dialogue,
+		durationSec: shot.durationSec,
+		notes: shot.notes,
+	};
+}
+
+/** 7 項目がすべて同じか（自動保存の「保存済み」判定に使う。参照ではなく値で比べる） */
+export function shotFieldsEqual(a: ShotFields, b: ShotFields): boolean {
+	return shotFieldKeys.every((key) => a[key] === b[key]);
+}
