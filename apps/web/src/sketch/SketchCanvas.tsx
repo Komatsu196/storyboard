@@ -151,7 +151,8 @@ export function SketchCanvas({
 	const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
 		// 2 本目の指・右クリックは無視（設計書 §6.3）
 		if (!e.isPrimary || gestureRef.current || scale === 0) return;
-		if (e.pointerType === "mouse" && e.button !== 0) return;
+		// ペンのバレルボタンや消しゴム側は無視する(タイプを問わない。D-012: ペン専用機能はなし)
+		if (e.button !== 0) return;
 		e.currentTarget.setPointerCapture(e.pointerId);
 		const [x, y] = toLogical(e, e.currentTarget.getBoundingClientRect());
 		if (tool.mode === "pen") {
@@ -240,6 +241,10 @@ export function SketchCanvas({
 					onPointerMove={onPointerMove}
 					onPointerUp={(e) => finish(e, false)}
 					onPointerCancel={(e) => finish(e, true)}
+					// pointerup を伴わないキャプチャ喪失(例: ドラッグ中にウィンドウのフォーカスが外れる)を拾う。
+					// 拾わないと gestureRef が残ったままキャンバスが反応しなくなる。finish は該当ジェスチャが
+					// なければ即 return するので、pointerup 内の releasePointerCapture が誘発しても無害
+					onLostPointerCapture={(e) => finish(e, true)}
 					onContextMenu={(e) => e.preventDefault()}
 				/>
 			</div>
