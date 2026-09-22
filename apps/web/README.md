@@ -58,7 +58,8 @@ pnpm run deploy
 
 ```
 src/      SPA（routes/ はファイルベースルーティング。認証必須ページは routes/_authed/ 配下）
-server/   Hono Worker（app.ts がルート、auth.ts が認証、db/ が Drizzle）
-shared/   SPA と Worker の両方から使う純粋なコード（zod スキーマ・スケッチのロジック）
+src/sketch/  スケッチエディタ（SketchCanvas・Toolbar・SketchThumb・描画関数 render.ts・状態フック）
+server/   Hono Worker（app.ts がルート、routes/ がサブアプリ、auth.ts が認証、db/ が Drizzle）
+shared/   SPA と Worker の両方から使う純粋なコード（zod スキーマ・sketch/ の幾何ロジックと状態遷移）
 drizzle/  マイグレーション SQL
 ```

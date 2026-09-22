@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		name: "unit",
 		environment: "node",
-		include: ["shared/**/*.test.ts", "server/**/*.test.ts"],
+		include: ["shared/**/*.test.ts", "server/**/*.test.ts", "src/**/*.test.ts"],
 		exclude: ["**/*.api.test.ts", "**/node_modules/**"],
 		passWithNoTests: true,
 	},

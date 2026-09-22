@@ -7,6 +7,9 @@ import {
 	startSession,
 	verifyPassword,
 } from "./auth";
+import { projectRoutes } from "./routes/projects";
+import { sceneRoutes } from "./routes/scenes";
+import { shotRoutes } from "./routes/shots";
 
 export function createApp() {
 	const app = new Hono<{ Bindings: Env }>().basePath("/api");
@@ -36,7 +39,10 @@ export function createApp() {
 			endSession(c);
 			return c.body(null, 204);
 		})
-		.get("/session", (c) => c.json({ ok: true }));
+		.get("/session", (c) => c.json({ ok: true }))
+		.route("/projects", projectRoutes)
+		.route("/scenes", sceneRoutes)
+		.route("/shots", shotRoutes);
 
 	return routes;
 }
