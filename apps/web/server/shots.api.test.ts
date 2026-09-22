@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app";
 import { authed, json } from "./test/authed";
@@ -23,6 +24,16 @@ const sketch = {
 };
 
 describe("shots", () => {
+	it("requires a session", async () => {
+		const res = await app.request(
+			"/api/scenes/x/shots",
+			{ method: "POST" },
+			env,
+		);
+		expect(res.status).toBe(401);
+		expect(await res.json()).toEqual({ error: "unauthorized" });
+	});
+
 	it("creates shots with sequential numbers and no sketch", async () => {
 		const { req, scene } = await setup();
 		const c1 = await req(`/api/scenes/${scene.id}/shots`, { method: "POST" });
@@ -53,6 +64,16 @@ describe("shots", () => {
 });
 
 describe("sketches", () => {
+	it("requires a session", async () => {
+		const res = await app.request(
+			"/api/shots/x/sketch",
+			json("PUT", sketch),
+			env,
+		);
+		expect(res.status).toBe(401);
+		expect(await res.json()).toEqual({ error: "unauthorized" });
+	});
+
 	it("upserts a sketch and returns it in the project detail", async () => {
 		const { req, project, scene } = await setup();
 		const shot = (await (
@@ -102,6 +123,25 @@ describe("sketches", () => {
 		expect(
 			(await req(`/api/shots/${shot.id}/sketch`, json("PUT", tooMany))).status,
 		).toBe(400);
+	});
+
+	it("rejects a body over 1 MB with 413", async () => {
+		const { req, scene } = await setup();
+		const shot = (await (
+			await req(`/api/scenes/${scene.id}/shots`, { method: "POST" })
+		).json()) as { id: string };
+		const big = {
+			...sketch,
+			strokes: Array.from({ length: 1500 }, () => ({
+				color: "black" as const,
+				size: 2 as const,
+				p: Array.from({ length: 200 }, (_, i) => i),
+			})),
+		};
+		expect(JSON.stringify(big).length).toBeGreaterThan(1024 * 1024);
+		const res = await req(`/api/shots/${shot.id}/sketch`, json("PUT", big));
+		expect(res.status).toBe(413);
+		expect(await res.json()).toEqual({ error: "too_large" });
 	});
 
 	it("returns 404 for an unknown shot", async () => {

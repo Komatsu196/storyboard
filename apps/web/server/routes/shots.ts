@@ -9,7 +9,11 @@ import { validationHook } from "../validate";
 
 export const shotRoutes = new Hono<{ Bindings: Env }>().put(
 	"/:id/sketch",
-	bodyLimit({ maxSize: 1024 * 1024 }),
+	bodyLimit({
+		maxSize: 1024 * 1024,
+		// デフォルトの onError は例外を投げ、app.onError が 500 にしてしまう。413 を直接返す
+		onError: (c) => c.json({ error: "too_large" as const }, 413),
+	}),
 	zValidator("json", sketchDataSchema, validationHook),
 	async (c) => {
 		const shotId = c.req.param("id");
