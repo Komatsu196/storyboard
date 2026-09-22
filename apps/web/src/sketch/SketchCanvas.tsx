@@ -242,9 +242,11 @@ export function SketchCanvas({
 					onPointerUp={(e) => finish(e, false)}
 					onPointerCancel={(e) => finish(e, true)}
 					// pointerup を伴わないキャプチャ喪失(例: ドラッグ中にウィンドウのフォーカスが外れる)を拾う。
-					// 拾わないと gestureRef が残ったままキャンバスが反応しなくなる。finish は該当ジェスチャが
-					// なければ即 return するので、pointerup 内の releasePointerCapture が誘発しても無害
-					onLostPointerCapture={(e) => finish(e, true)}
+					// 拾わないと gestureRef が残ったままキャンバスが反応しなくなる。描きかけは捨てずに確定する:
+					// ブラウザによっては lostpointercapture が pointerup より先に来ることがあり、捨てると
+					// 描いた線が離した瞬間に消えてしまう。finish は該当ジェスチャがなければ即 return するので、
+					// どちらの順で来ても確定は 1 回だけ
+					onLostPointerCapture={(e) => finish(e, false)}
 					onContextMenu={(e) => e.preventDefault()}
 				/>
 			</div>
