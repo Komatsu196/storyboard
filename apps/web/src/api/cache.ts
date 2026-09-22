@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ShotFields } from "../../shared/schemas";
 import type { SketchData } from "../../shared/sketch/types";
 import {
 	type ProjectDetail,
@@ -56,6 +57,24 @@ export function setShotSketch(
 		scenes: p.scenes.map((s) => ({
 			...s,
 			shots: s.shots.map((sh) => (sh.id === shotId ? { ...sh, sketch } : sh)),
+		})),
+	}));
+}
+
+/** 入力のたび・PATCH 成功のたびに呼び、カット行の 7 項目（＋updatedAt）を更新する。sketch は触らない */
+export function setShotFields(
+	queryClient: QueryClient,
+	projectId: string,
+	shotId: string,
+	fields: Partial<ShotFields> & { updatedAt?: string },
+): void {
+	updateProject(queryClient, projectId, (p) => ({
+		...p,
+		scenes: p.scenes.map((s) => ({
+			...s,
+			shots: s.shots.map((sh) =>
+				sh.id === shotId ? { ...sh, ...fields } : sh,
+			),
 		})),
 	}));
 }
