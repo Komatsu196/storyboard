@@ -45,6 +45,11 @@ export function NewProjectButton() {
 			</button>
 			<dialog
 				ref={dialogRef}
+				onClose={() => {
+					setTitle("");
+					setAspectRatio(DEFAULT_ASPECT_RATIO);
+					mutation.reset();
+				}}
 				className="m-auto w-80 rounded-lg p-4 shadow-lg backdrop:bg-black/40"
 			>
 				<form onSubmit={onSubmit} className="flex flex-col gap-3">
