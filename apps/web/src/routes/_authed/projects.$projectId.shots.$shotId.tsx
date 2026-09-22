@@ -68,7 +68,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 	return (
 		<div className="flex min-h-dvh flex-col md:flex-row">
 			{/* ステージ: ヘッダ＋キャンバス＋ツールバーで画面ちょうど 1 枚分。③ で右（スマホは下）にフォームを足す */}
-			<div className="flex h-dvh flex-col md:flex-1">
+			<div className="flex h-dvh touch-manipulation flex-col md:flex-1">
 				<header className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
 					<Link
 						to="/projects/$projectId"

@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
 	type StrokeColor,
 	type StrokeSize,
@@ -25,9 +26,17 @@ export function Toolbar({
 	onChange: (tool: Tool) => void;
 }) {
 	const isPen = tool.mode === "pen";
+	// スマホでは click の合成がストローク直後の 1 タップ目で抜けることがある（二重タップ判定など）ので、
+	// 指が触れた瞬間（pointerdown）にも切り替える。click はキーボード操作用に残す（同じ値なので二重に効いても無害）
+	const select = (next: Tool) => ({
+		onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
+			if (e.isPrimary && e.button === 0) onChange(next);
+		},
+		onClick: () => onChange(next),
+	});
 	return (
 		<div
-			className="flex shrink-0 items-center gap-1 border-t bg-white p-1"
+			className="flex shrink-0 items-center gap-1 border-t bg-white p-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
 			role="toolbar"
 			aria-label="ツール"
 		>
@@ -40,7 +49,7 @@ export function Toolbar({
 						isPen && tool.color === color,
 						color === "red" ? "bg-red-600 text-white" : "bg-black text-white",
 					)}
-					onClick={() => onChange({ ...tool, mode: "pen", color })}
+					{...select({ ...tool, mode: "pen", color })}
 				>
 					{colorLabels[color]}
 				</button>
@@ -52,7 +61,7 @@ export function Toolbar({
 					type="button"
 					aria-pressed={isPen && tool.size === size}
 					className={buttonClass(isPen && tool.size === size)}
-					onClick={() => onChange({ ...tool, mode: "pen", size })}
+					{...select({ ...tool, mode: "pen", size })}
 				>
 					{sizeLabels[size]}
 				</button>
@@ -62,7 +71,7 @@ export function Toolbar({
 				type="button"
 				aria-pressed={tool.mode === "eraser"}
 				className={buttonClass(tool.mode === "eraser")}
-				onClick={() => onChange({ ...tool, mode: "eraser" })}
+				{...select({ ...tool, mode: "eraser" })}
 			>
 				消しゴム
 			</button>
