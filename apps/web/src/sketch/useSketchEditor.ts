@@ -37,8 +37,9 @@ export function useSketchEditor(initial: SketchData) {
 	const present = state.history.present;
 	// 保存対象（履歴の現在値）。消しゴム中の作業用配列は含めない（T-012）
 	const committed = useMemo<SketchData>(
-		() => ({ v: 1, w, h, strokes: present }),
-		[w, h, present],
+		() =>
+			present === initial.strokes ? initial : { v: 1, w, h, strokes: present },
+		[initial, w, h, present],
 	);
 	// 表示用（消しゴム中は作業用配列）
 	const visible = currentStrokes(state);

@@ -56,7 +56,9 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		},
 		[queryClient, project.id, shot.id],
 	);
-	const { status } = useAutosave(editor.committed, save, { delay: 800 });
+	const { status } = useAutosave(shot.id, editor.committed, save, {
+		delay: 800,
+	});
 
 	// ストロークが確定するたびにキャッシュへ書き、作品ページに戻ったときサムネイルが最新になるようにする（設計書 §5.2）
 	useEffect(() => {

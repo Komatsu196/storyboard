@@ -9,6 +9,8 @@ export type Autosaver<T> = {
 	set: (value: T) => void;
 	/** 予約を取り消して今すぐ保存する。送信中なら終わってから最新値を送る */
 	flush: (keepalive?: boolean) => Promise<void>;
+	/** ステータスの変化を購読する。返り値の関数を呼ぶと購読解除する */
+	subscribe: (listener: (status: SaveStatus) => void) => () => void;
 	readonly status: SaveStatus;
 };
 
@@ -34,6 +36,7 @@ export function createAutosaver<T>(options: {
 	let failures = 0;
 	let gaveUp = false;
 	let status: SaveStatus = "saved";
+	const listeners = new Set<(status: SaveStatus) => void>();
 
 	function notify() {
 		const next: SaveStatus = inFlight
@@ -44,6 +47,7 @@ export function createAutosaver<T>(options: {
 		if (next !== status) {
 			status = next;
 			onStatus?.(next);
+			for (const listener of listeners) listener(next);
 		}
 	}
 
@@ -109,6 +113,12 @@ export function createAutosaver<T>(options: {
 			if (inFlight) await inFlight;
 			clearTimer();
 			await run(keepalive);
+		},
+		subscribe(listener) {
+			listeners.add(listener);
+			return () => {
+				listeners.delete(listener);
+			};
 		},
 		get status() {
 			return status;

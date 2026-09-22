@@ -131,4 +131,17 @@ describe("createAutosaver", () => {
 		expect(calls.map((c) => c.value)).toEqual(["v1", "v2"]);
 		expect(saver.status).toBe("saved");
 	});
+
+	it("notifies subscribed listeners and stops after unsubscribe", async () => {
+		const { saver } = setup();
+		const received: SaveStatus[] = [];
+		const unsubscribe = saver.subscribe((s) => received.push(s));
+		saver.set("v1");
+		await vi.advanceTimersByTimeAsync(800);
+		expect(received).toEqual(["unsaved", "saving", "saved"]);
+		unsubscribe();
+		saver.set("v2");
+		await vi.advanceTimersByTimeAsync(800);
+		expect(received).toEqual(["unsaved", "saving", "saved"]);
+	});
 });
