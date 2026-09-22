@@ -23,6 +23,7 @@ function getOrCreateEntry<T>(
 	initial: T,
 	save: SaveFn<T>,
 	delay: number,
+	equals?: (a: T, b: T) => boolean,
 ) {
 	const existing = savers.get(key);
 	if (existing) return existing;
@@ -32,6 +33,7 @@ function getOrCreateEntry<T>(
 		initial,
 		save: (v, opts) => saveRef.current(v, opts),
 		delay,
+		equals: equals as ((a: unknown, b: unknown) => boolean) | undefined,
 	});
 	const entry = { saver, saveRef };
 	savers.set(key, entry);
@@ -41,14 +43,17 @@ function getOrCreateEntry<T>(
 /**
  * value が変わるたびに delay 後に save する(設計書 §5.3)。
  * 画面遷移(アンマウント)では即時 flush、タブが隠れる・ページを離れるときは keepalive 付きで flush する。
+ * equals を渡すと「保存済みか」を値で判定する(省略時は参照の一致)。
  */
 export function useAutosave<T>(
 	key: string,
 	value: T,
 	save: SaveFn<T>,
-	{ delay }: { delay: number },
+	{ delay, equals }: { delay: number; equals?: (a: T, b: T) => boolean },
 ): { status: SaveStatus; flush: (keepalive?: boolean) => Promise<void> } {
-	const [entry] = useState(() => getOrCreateEntry(key, value, save, delay));
+	const [entry] = useState(() =>
+		getOrCreateEntry(key, value, save, delay, equals),
+	);
 	// この hook インスタンスが生きている間、実際に呼ばれる save を最新に保つ
 	useEffect(() => {
 		entry.saveRef.current = save as unknown as SaveFn<unknown>;

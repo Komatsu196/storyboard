@@ -27,8 +27,16 @@ export function createAutosaver<T>(options: {
 	delay: number;
 	onStatus?: (status: SaveStatus) => void;
 	retryDelays?: number[];
+	/** 「保存済みか」の判定。省略時は参照の一致（===）。値で比べたいときに渡す */
+	equals?: (a: T, b: T) => boolean;
 }): Autosaver<T> {
-	const { save, delay, onStatus, retryDelays = DEFAULT_RETRY_DELAYS } = options;
+	const {
+		save,
+		delay,
+		onStatus,
+		retryDelays = DEFAULT_RETRY_DELAYS,
+		equals = (a: T, b: T) => a === b,
+	} = options;
 	let latest = options.initial;
 	let lastSaved = options.initial;
 	let timer: ReturnType<typeof setTimeout> | null = null;
@@ -37,11 +45,12 @@ export function createAutosaver<T>(options: {
 	let gaveUp = false;
 	let status: SaveStatus = "saved";
 	const listeners = new Set<(status: SaveStatus) => void>();
+	const isSaved = () => equals(latest, lastSaved);
 
 	function notify() {
 		const next: SaveStatus = inFlight
 			? "saving"
-			: latest === lastSaved
+			: isSaved()
 				? "saved"
 				: "unsaved";
 		if (next !== status) {
@@ -68,7 +77,7 @@ export function createAutosaver<T>(options: {
 
 	function run(keepalive: boolean): Promise<void> {
 		if (inFlight) return inFlight;
-		if (latest === lastSaved) {
+		if (isSaved()) {
 			notify();
 			return Promise.resolve();
 		}
@@ -92,7 +101,7 @@ export function createAutosaver<T>(options: {
 			.finally(() => {
 				inFlight = null;
 				// 送信中に値が変わっていたら、もう一度予約する
-				if (!gaveUp && timer === null && latest !== lastSaved) schedule(delay);
+				if (!gaveUp && timer === null && !isSaved()) schedule(delay);
 				notify();
 			});
 		notify();
@@ -104,7 +113,7 @@ export function createAutosaver<T>(options: {
 			latest = value;
 			gaveUp = false;
 			failures = 0;
-			if (latest === lastSaved) clearTimer();
+			if (isSaved()) clearTimer();
 			else schedule(delay);
 			notify();
 		},
@@ -124,4 +133,11 @@ export function createAutosaver<T>(options: {
 			return status;
 		},
 	};
+}
+
+/** 複数の自動保存の状態を 1 つに: どれか saving → saving、どれか unsaved → unsaved、すべて saved → saved */
+export function combineStatus(...statuses: SaveStatus[]): SaveStatus {
+	if (statuses.includes("saving")) return "saving";
+	if (statuses.includes("unsaved")) return "unsaved";
+	return "saved";
 }

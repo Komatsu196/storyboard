@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAutosaver, type SaveStatus } from "./autosaver";
+import { combineStatus, createAutosaver, type SaveStatus } from "./autosaver";
 
 type Deferred = { resolve: () => void; reject: (e: unknown) => void };
 
@@ -143,5 +143,49 @@ describe("createAutosaver", () => {
 		saver.set("v2");
 		await vi.advanceTimersByTimeAsync(800);
 		expect(received).toEqual(["unsaved", "saving", "saved"]);
+	});
+});
+
+describe("createAutosaver with equals", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
+	it("treats values that are equal by value as saved", async () => {
+		const calls: { a: number }[] = [];
+		const saver = createAutosaver<{ a: number }>({
+			initial: { a: 1 },
+			save: async (v) => {
+				calls.push(v);
+			},
+			delay: 800,
+			equals: (x, y) => x.a === y.a,
+		});
+		saver.set({ a: 1 });
+		expect(saver.status).toBe("saved");
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(calls).toEqual([]);
+
+		saver.set({ a: 2 });
+		expect(saver.status).toBe("unsaved");
+		await vi.advanceTimersByTimeAsync(800);
+		expect(calls).toEqual([{ a: 2 }]);
+		expect(saver.status).toBe("saved");
+
+		// 保存した値と同じ値に戻せば予約は取り消される
+		saver.set({ a: 3 });
+		saver.set({ a: 2 });
+		expect(saver.status).toBe("saved");
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(calls).toEqual([{ a: 2 }]);
+	});
+});
+
+describe("combineStatus", () => {
+	it("prefers saving, then unsaved, then saved", () => {
+		expect(combineStatus("saved", "saved")).toBe("saved");
+		expect(combineStatus("saved", "unsaved")).toBe("unsaved");
+		expect(combineStatus("unsaved", "saving")).toBe("saving");
+		expect(combineStatus("saving", "saved")).toBe("saving");
+		expect(combineStatus()).toBe("saved");
 	});
 });
