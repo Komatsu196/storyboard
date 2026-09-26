@@ -104,6 +104,7 @@ export function useStructureMutations(projectId: string) {
 
 	const updateProjectFields = (input: UpdateProject) => {
 		setError(null);
+		void queryClient.cancelQueries({ queryKey: projectKey });
 		setProjectFields(queryClient, projectId, input);
 		setProjectListFields(queryClient, projectId, input);
 		projectPatch.mutate(input);
@@ -115,11 +116,13 @@ export function useStructureMutations(projectId: string) {
 			sceneDelete.isPending || shotDelete.isPending || projectDelete.isPending,
 		moveScene: (sceneId: string, delta: Delta) => {
 			setError(null);
+			void queryClient.cancelQueries({ queryKey: projectKey });
 			const ids = moveSceneInCache(queryClient, projectId, sceneId, delta);
 			if (ids) order.mutate({ kind: "scenes", ids });
 		},
 		moveShot: (sceneId: string, shotId: string, delta: Delta) => {
 			setError(null);
+			void queryClient.cancelQueries({ queryKey: projectKey });
 			const ids = moveShotInCache(
 				queryClient,
 				projectId,
@@ -134,6 +137,7 @@ export function useStructureMutations(projectId: string) {
 			updateProjectFields({ aspectRatio }),
 		updateScene: (sceneId: string, input: UpdateScene) => {
 			setError(null);
+			void queryClient.cancelQueries({ queryKey: projectKey });
 			setSceneFields(queryClient, projectId, sceneId, input);
 			scenePatch.mutate({ sceneId, input });
 		},
