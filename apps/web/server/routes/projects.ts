@@ -1,8 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { Hono } from "hono";
-import { createProjectSchema, createSceneSchema } from "../../shared/schemas";
-import type { SketchData } from "../../shared/sketch/types";
+import {
+	createProjectSchema,
+	createSceneSchema,
+	updateProjectSchema,
+} from "../../shared/schemas";
+import { recenterSketch } from "../../shared/sketch/recenter";
+import { canvasSizes, type SketchData } from "../../shared/sketch/types";
 import { createDb } from "../db";
 import { projects, scenes, shots, sketches } from "../db/schema";
 import { nextNumber, nextPosition } from "../numbering";
@@ -75,6 +80,71 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 					})),
 			})),
 		});
+	})
+	// 作品名・アスペクト比（T-019）。比率が変わるときは作品の全スケッチを中央合わせに書き換え、
+	// 作品行と一緒に 1 つの batch で書く（T-020。D1 の batch は原子的）
+	.patch(
+		"/:id",
+		zValidator("json", updateProjectSchema, validationHook),
+		async (c) => {
+			const id = c.req.param("id");
+			const input = c.req.valid("json");
+			const db = createDb(c.env.DB);
+			const current = await db
+				.select()
+				.from(projects)
+				.where(eq(projects.id, id))
+				.get();
+			if (!current) return c.json({ error: "not_found" as const }, 404);
+			const now = new Date().toISOString();
+			const updateProject = db
+				.update(projects)
+				.set({ ...input, updatedAt: now })
+				.where(eq(projects.id, id))
+				.returning();
+			// 比率が変わるときだけ新しい枠の大きさ（変わらなければ null でスケッチは触らない）
+			const size =
+				input.aspectRatio !== undefined &&
+				input.aspectRatio !== current.aspectRatio
+					? canvasSizes[input.aspectRatio]
+					: null;
+			const rows = size
+				? await db
+						.select({ shotId: sketches.shotId, data: sketches.data })
+						.from(sketches)
+						.innerJoin(shots, eq(sketches.shotId, shots.id))
+						.innerJoin(scenes, eq(shots.sceneId, scenes.id))
+						.where(eq(scenes.projectId, id))
+				: [];
+			const updateSketches =
+				size === null
+					? []
+					: rows.map((r) =>
+							db
+								.update(sketches)
+								.set({
+									data: JSON.stringify(
+										recenterSketch(JSON.parse(r.data) as SketchData, size),
+									),
+									updatedAt: now,
+								})
+								.where(eq(sketches.shotId, r.shotId)),
+						);
+			const [updated] = await db.batch([updateProject, ...updateSketches]);
+			const row = updated[0];
+			if (!row) return c.json({ error: "not_found" as const }, 404);
+			return c.json(row);
+		},
+	)
+	// 物理削除。シーン・カット・スケッチは ON DELETE CASCADE で消える
+	.delete("/:id", async (c) => {
+		const row = await createDb(c.env.DB)
+			.delete(projects)
+			.where(eq(projects.id, c.req.param("id")))
+			.returning({ id: projects.id })
+			.get();
+		if (!row) return c.json({ error: "not_found" as const }, 404);
+		return c.body(null, 204);
 	})
 	.post(
 		"/:id/scenes",
