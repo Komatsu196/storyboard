@@ -1,17 +1,30 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { toAspectRatio } from "../../../shared/schemas";
+import {
+	type CSSProperties,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
+import {
+	pickShotFields,
+	type ShotFields,
+	shotFieldsEqual,
+	toAspectRatio,
+} from "../../../shared/schemas";
 import { emptySketch, type SketchData } from "../../../shared/sketch/types";
-import { setShotSketch } from "../../api/cache";
+import { setShotFields, setShotSketch } from "../../api/cache";
 import {
 	type ProjectDetail,
+	patchShot,
 	projectQuery,
 	putSketch,
 	type Shot,
 } from "../../api/client";
-import type { SaveStatus } from "../../components/autosaver";
+import { combineStatus, type SaveStatus } from "../../components/autosaver";
 import { NotFound } from "../../components/NotFound";
+import { ShotForm } from "../../components/ShotForm";
 import { useAutosave } from "../../components/useAutosave";
 import { SketchCanvas } from "../../sketch/SketchCanvas";
 import { Toolbar } from "../../sketch/Toolbar";
@@ -48,7 +61,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 	);
 	const editor = useSketchEditor(initial);
 
-	const save = useCallback(
+	const saveSketch = useCallback(
 		async (data: SketchData, opts: { keepalive: boolean }) => {
 			await putSketch(shot.id, data, opts);
 			// 保存完了後にも書く（保存中に再取得が走って古いデータに戻された場合の保険）
@@ -56,7 +69,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		},
 		[queryClient, project.id, shot.id],
 	);
-	const { status } = useAutosave(shot.id, editor.committed, save, {
+	const sketchSave = useAutosave(shot.id, editor.committed, saveSketch, {
 		delay: 800,
 	});
 
@@ -65,10 +78,39 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		setShotSketch(queryClient, project.id, shot.id, editor.committed);
 	}, [queryClient, project.id, shot.id, editor.committed]);
 
+	// 8項目フォーム（画を除く 7 項目）。初期値はキャッシュから 1 回だけ（T-016、設計書 §6.5）
+	const [fields, setFields] = useState<ShotFields>(() => pickShotFields(shot));
+	const numberEmpty = fields.number.trim() === "";
+	const saveFields = useCallback(
+		async (value: ShotFields, opts: { keepalive: boolean }) => {
+			// 番号が空のあいだは送らない。番号が入った時点で 7 項目まとめて送る
+			if (value.number.trim() === "") return;
+			const row = await patchShot(shot.id, value, opts);
+			setShotFields(queryClient, project.id, shot.id, {
+				...pickShotFields(row),
+				updatedAt: row.updatedAt,
+			});
+		},
+		[queryClient, project.id, shot.id],
+	);
+	const fieldsSave = useAutosave(`fields:${shot.id}`, fields, saveFields, {
+		delay: 1500,
+		equals: shotFieldsEqual,
+	});
+	// 入力のたびにキャッシュへ書き、作品ページに戻ったとき即反映する。番号が空のあいだは書かない（保存されない値をカードに映さない）
+	useEffect(() => {
+		if (numberEmpty) return;
+		setShotFields(queryClient, project.id, shot.id, fields);
+	}, [queryClient, project.id, shot.id, fields, numberEmpty]);
+
+	const status: SaveStatus = numberEmpty
+		? "unsaved"
+		: combineStatus(sketchSave.status, fieldsSave.status);
+
 	return (
-		<div className="flex min-h-dvh flex-col md:flex-row">
-			{/* ステージ: ヘッダ＋キャンバス＋ツールバーで画面ちょうど 1 枚分。③ で右（スマホは下）にフォームを足す */}
-			<div className="flex h-dvh touch-manipulation flex-col md:flex-1">
+		<div className="flex min-h-dvh flex-col md:h-dvh md:flex-row">
+			{/* ステージ: ヘッダ＋キャンバス＋ツールバー。スマホは内容の高さ（下にフォームが続く）、PC は 1 画面（T-016） */}
+			<div className="flex touch-manipulation flex-col md:h-full md:min-w-0 md:flex-1">
 				<header className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
 					<Link
 						to="/projects/$projectId"
@@ -77,7 +119,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 					>
 						← {project.title}
 					</Link>
-					<span className="shrink-0 font-bold">C{shot.number}</span>
+					<span className="shrink-0 font-bold">C{fields.number}</span>
 					<span
 						className={`shrink-0 text-xs ${status === "unsaved" ? "text-red-600" : "text-gray-500"}`}
 					>
@@ -106,7 +148,13 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 						🗑
 					</HeaderButton>
 				</header>
-				<div className="min-h-0 flex-1 bg-gray-100 p-2">
+				{/* スマホ: 幅 × h/w の高さ（上限は画面 − ヘッダ − ツールバー）。PC: 残りの高さいっぱい */}
+				<div
+					className="max-md:aspect-(--canvas-ar) max-md:max-h-[calc(100dvh-6.5rem)] bg-gray-100 p-2 md:min-h-0 md:flex-1"
+					style={
+						{ "--canvas-ar": `${initial.w} / ${initial.h}` } as CSSProperties
+					}
+				>
 					<SketchCanvas
 						sketch={editor.sketch}
 						tool={editor.tool}
@@ -118,6 +166,14 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 				</div>
 				<Toolbar tool={editor.tool} onChange={editor.setTool} />
 			</div>
+			{/* フォーム: スマホはツールバーの直下、PC は右列で独立にスクロール */}
+			<aside className="border-t md:w-80 md:overflow-y-auto md:border-t-0 md:border-l lg:w-96">
+				<ShotForm
+					fields={fields}
+					onChange={setFields}
+					onBlur={() => void fieldsSave.flush()}
+				/>
+			</aside>
 		</div>
 	);
 }

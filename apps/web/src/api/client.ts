@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { hc, type InferResponseType } from "hono/client";
 import type { AppType } from "../../server/app";
-import type { AspectRatio } from "../../shared/schemas";
+import type { AspectRatio, ShotFields } from "../../shared/schemas";
 import type { SketchData } from "../../shared/sketch/types";
 
 // セッション切れの 401 はログイン画面へ送る。
@@ -28,6 +28,12 @@ export type ProjectDetail = InferResponseType<
 >;
 export type Scene = ProjectDetail["scenes"][number];
 export type Shot = Scene["shots"][number];
+
+/** PATCH の応答（カット行。sketch は含まない） */
+export type ShotRow = InferResponseType<
+	(typeof api.shots)[":id"]["$patch"],
+	200
+>;
 
 export class NotFoundError extends Error {
 	constructor() {
@@ -106,13 +112,13 @@ export async function createShot(sceneId: string): Promise<Shot> {
 	return res.json();
 }
 
-/** keepalive の fetch は本文 64KB までなので、大きいスケッチは通常送信に落とす */
+/** keepalive の fetch は本文 64KB までをカット情報の PATCH と共有するので、大きいスケッチは通常送信に落とす */
 export async function putSketch(
 	shotId: string,
 	data: SketchData,
 	opts: { keepalive: boolean },
 ): Promise<void> {
-	const keepalive = opts.keepalive && JSON.stringify(data).length < 60_000;
+	const keepalive = opts.keepalive && JSON.stringify(data).length < 54_000;
 	const res = await api.shots[":id"].sketch.$put(
 		{ param: { id: shotId }, json: data },
 		{ init: { keepalive } },
@@ -122,4 +128,22 @@ export async function putSketch(
 		console.error("put sketch failed", res.status, await res.text());
 		throw new Error(`put sketch: ${res.status}`);
 	}
+}
+
+/** カット情報 7 項目をまとめて保存する（T-011）。keepalive は離脱時の flush 用（本文は小さいので常に可） */
+export async function patchShot(
+	shotId: string,
+	fields: ShotFields,
+	opts: { keepalive: boolean },
+): Promise<ShotRow> {
+	const res = await api.shots[":id"].$patch(
+		{ param: { id: shotId }, json: fields },
+		{ init: { keepalive: opts.keepalive } },
+	);
+	if (res.status !== 200) {
+		// 400（検証エラー）は単一ユーザーの UI では原則起きない。起きたら中身をコンソールに残す（設計書 §7）
+		console.error("patch shot failed", res.status, await res.text());
+		throw new Error(`patch shot: ${res.status}`);
+	}
+	return res.json();
 }
