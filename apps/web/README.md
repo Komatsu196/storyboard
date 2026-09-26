@@ -1,6 +1,6 @@
 # storyboard web
 
-絵コンテ管理アプリ本体。1つの Cloudflare Worker で SPA（Vite + React + TanStack Router）と API（Hono、`/api/*`）を配信し、データは D1 に置く。設計の記録は `docs/tech/decisions.md`（T-001〜T-016）。
+絵コンテ管理アプリ本体。1つの Cloudflare Worker で SPA（Vite + React + TanStack Router）と API（Hono、`/api/*`）を配信し、データは D1 に置く。設計の記録は `docs/tech/decisions.md`（T-001〜T-020）。
 
 ## セットアップ
 
