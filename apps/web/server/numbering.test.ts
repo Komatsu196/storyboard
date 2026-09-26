@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextNumber, nextPosition } from "./numbering";
+import { nextNumber, nextPosition, sameIdSet } from "./numbering";
 
 describe("nextNumber", () => {
 	it("uses the largest leading integer + 1", () => {
@@ -23,5 +23,19 @@ describe("nextPosition", () => {
 		expect(nextPosition([])).toBe(0);
 		expect(nextPosition([0, 1, 2])).toBe(3);
 		expect(nextPosition([5])).toBe(6);
+	});
+});
+
+describe("sameIdSet", () => {
+	it("is true when the ids are exactly the current siblings in any order", () => {
+		expect(sameIdSet(["b", "a"], ["a", "b"])).toBe(true);
+		expect(sameIdSet([], [])).toBe(true);
+	});
+
+	it("is false when an id is missing, extra, foreign or duplicated", () => {
+		expect(sameIdSet(["a"], ["a", "b"])).toBe(false);
+		expect(sameIdSet(["a", "b", "c"], ["a", "b"])).toBe(false);
+		expect(sameIdSet(["a", "x"], ["a", "b"])).toBe(false);
+		expect(sameIdSet(["a", "a"], ["a", "b"])).toBe(false);
 	});
 });

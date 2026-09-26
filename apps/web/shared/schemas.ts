@@ -22,6 +22,25 @@ export const createSceneSchema = z.object({
 	title: z.string().trim().max(200).default(""),
 });
 
+/** PATCH /api/projects/:id（T-019）。送られた項目だけ更新する。作成時と違い既定値は付けない */
+export const updateProjectSchema = z.object({
+	title: z.string().trim().min(1).max(200).optional(),
+	aspectRatio: aspectRatioSchema.optional(),
+});
+export type UpdateProject = z.infer<typeof updateProjectSchema>;
+
+/** PATCH /api/scenes/:id（T-018） */
+export const updateSceneSchema = z.object({
+	number: z.string().trim().min(1).max(20).optional(),
+	title: z.string().trim().max(200).optional(),
+});
+export type UpdateScene = z.infer<typeof updateSceneSchema>;
+
+/** PUT …/order。兄弟の ID を新しい並び順で全部送る（T-007） */
+export const orderSchema = z.object({
+	ids: z.array(z.string().min(1)).max(1000),
+});
+
 // カットの固定リスト（D-007）。フォームのチップもここから生成する
 export const shotSizes = ["LS", "FS", "MS", "BS", "CU", "ECU"] as const;
 export type ShotSize = (typeof shotSizes)[number];
