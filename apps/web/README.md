@@ -59,8 +59,8 @@ pnpm run deploy
 ```
 src/      SPA（routes/ はファイルベースルーティング。認証必須ページは routes/_authed/ 配下）
 src/sketch/  スケッチエディタ（SketchCanvas・Toolbar・SketchThumb・描画関数 render.ts・状態フック）
-src/components/  作品ページのカード（ShotCard・shotMeta）・8項目フォーム（ShotForm）・自動保存（useAutosave・autosaver）
+src/components/  作品ページのカード（ShotCard・shotMeta）・編集モード（SceneHeader・ItemActions・InlineField・useStructureMutations）・8項目フォーム（ShotForm）・自動保存（useAutosave・autosaver）
 server/   Hono Worker（app.ts がルート、routes/ がサブアプリ、auth.ts が認証、db/ が Drizzle）
-shared/   SPA と Worker の両方から使う純粋なコード（zod スキーマ・sketch/ の幾何ロジックと状態遷移）
+shared/   SPA と Worker の両方から使う純粋なコード（zod スキーマ・並べ替え order.ts・sketch/ の幾何ロジックと状態遷移・アスペクト比変更 sketch/recenter.ts）
 drizzle/  マイグレーション SQL
 ```
