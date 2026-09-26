@@ -88,6 +88,26 @@ describe("patch project", () => {
 		expect(await sketchUpdatedAt(c1.id)).toBe(before);
 	});
 
+	it("heals sketches left in another frame even when the ratio does not change", async () => {
+		const { req, project, c1, detail, putSketch } = await createFixture(
+			app,
+			"16:9",
+		);
+		expect(
+			(await putSketch(c1.id, [450, 800], { w: 900, h: 1600 })).status,
+		).toBe(204);
+
+		const res = await req(
+			`/api/projects/${project.id}`,
+			json("PATCH", { aspectRatio: "16:9" }),
+		);
+		expect(res.status).toBe(200);
+
+		const shot = (await detail()).scenes[0].shots[0];
+		expect(shot.sketch).toMatchObject({ w: 1600, h: 900 });
+		expect(shot.sketch?.strokes[0].p).toEqual([800, 450]);
+	});
+
 	it("leaves the sketches of other projects alone", async () => {
 		const a = await createFixture(app);
 		const b = await createFixture(app);

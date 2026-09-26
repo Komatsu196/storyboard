@@ -63,6 +63,7 @@ export function useStructureMutations(projectId: string) {
 	});
 
 	const projectPatch = useMutation({
+		scope: { id: `project:${projectId}` },
 		mutationFn: (input: UpdateProject) => patchProject(projectId, input),
 		onSuccess: (_row, input) =>
 			// アスペクト比の変更はサーバーがスケッチを書き換えるので取り直す（T-020）

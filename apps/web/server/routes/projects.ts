@@ -82,8 +82,9 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 			})),
 		});
 	})
-	// 作品名・アスペクト比（T-019）。比率が変わるときは作品の全スケッチを中央合わせに書き換え、
-	// 作品行と一緒に 1 つの batch で書く（T-020。D1 の batch は原子的）
+	// 作品名・アスペクト比（T-019）。アスペクト比を指定したときは、その枠からずれているスケッチ
+	// （比率変更を取りこぼした分も含む）をすべて中央合わせに書き換え、作品行と一緒に
+	// 1 つの batch で書く（T-020。D1 の batch は原子的）
 	.patch(
 		"/:id",
 		zValidator("json", updateProjectSchema, validationHook),
@@ -103,12 +104,9 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 				.set({ ...input, updatedAt: now })
 				.where(eq(projects.id, id))
 				.returning();
-			// 比率が変わるときだけ新しい枠の大きさ（変わらなければ null でスケッチは触らない）
+			// 比率を指定されたときだけ新しい枠の大きさ（指定がなければ null でスケッチは触らない）
 			const size =
-				input.aspectRatio !== undefined &&
-				input.aspectRatio !== current.aspectRatio
-					? canvasSizes[input.aspectRatio]
-					: null;
+				input.aspectRatio !== undefined ? canvasSizes[input.aspectRatio] : null;
 			const rows = size
 				? await db
 						.select({ shotId: sketches.shotId, data: sketches.data })
@@ -120,17 +118,19 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 			const updateSketches =
 				size === null
 					? []
-					: rows.map((r) =>
-							db
-								.update(sketches)
-								.set({
-									data: JSON.stringify(
-										recenterSketch(JSON.parse(r.data) as SketchData, size),
-									),
-									updatedAt: now,
-								})
-								.where(eq(sketches.shotId, r.shotId)),
-						);
+					: rows.flatMap((r) => {
+							const data = JSON.parse(r.data) as SketchData;
+							if (data.w === size.w && data.h === size.h) return [];
+							return [
+								db
+									.update(sketches)
+									.set({
+										data: JSON.stringify(recenterSketch(data, size)),
+										updatedAt: now,
+									})
+									.where(eq(sketches.shotId, r.shotId)),
+							];
+						});
 			const [updated] = await db.batch([updateProject, ...updateSketches]);
 			const row = updated[0];
 			if (!row) return c.json({ error: "not_found" as const }, 404);
