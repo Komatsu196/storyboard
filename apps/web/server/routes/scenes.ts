@@ -1,10 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { updateSceneSchema } from "../../shared/schemas";
+import { orderSchema, updateSceneSchema } from "../../shared/schemas";
 import { createDb } from "../db";
 import { scenes, shots } from "../db/schema";
-import { nextNumber, nextPosition } from "../numbering";
+import { nextNumber, nextPosition, sameIdSet } from "../numbering";
 import { validationHook } from "../validate";
 
 export const sceneRoutes = new Hono<{ Bindings: Env }>()
@@ -73,4 +73,43 @@ export const sceneRoutes = new Hono<{ Bindings: Env }>()
 			.get();
 		if (!row) return c.json({ error: "not_found" as const }, 404);
 		return c.body(null, 204);
-	});
+	})
+	// 並べ替え（T-007 / T-017）。シーンをまたぐ移動はしない（Later）
+	.put(
+		"/:id/shots/order",
+		zValidator("json", orderSchema, validationHook),
+		async (c) => {
+			const sceneId = c.req.param("id");
+			const { ids } = c.req.valid("json");
+			const db = createDb(c.env.DB);
+			const scene = await db
+				.select({ id: scenes.id })
+				.from(scenes)
+				.where(eq(scenes.id, sceneId))
+				.get();
+			if (!scene) return c.json({ error: "not_found" as const }, 404);
+			const current = await db
+				.select({ id: shots.id })
+				.from(shots)
+				.where(eq(shots.sceneId, sceneId));
+			if (
+				!sameIdSet(
+					ids,
+					current.map((s) => s.id),
+				)
+			) {
+				return c.json(
+					{
+						error: "validation" as const,
+						issues: [{ message: "ids must be exactly the current siblings" }],
+					},
+					400,
+				);
+			}
+			const [first, ...rest] = ids.map((id, position) =>
+				db.update(shots).set({ position }).where(eq(shots.id, id)),
+			);
+			if (first) await db.batch([first, ...rest]);
+			return c.body(null, 204);
+		},
+	);

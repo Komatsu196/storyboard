@@ -4,13 +4,14 @@ import { Hono } from "hono";
 import {
 	createProjectSchema,
 	createSceneSchema,
+	orderSchema,
 	updateProjectSchema,
 } from "../../shared/schemas";
 import { recenterSketch } from "../../shared/sketch/recenter";
 import { canvasSizes, type SketchData } from "../../shared/sketch/types";
 import { createDb } from "../db";
 import { projects, scenes, shots, sketches } from "../db/schema";
-import { nextNumber, nextPosition } from "../numbering";
+import { nextNumber, nextPosition, sameIdSet } from "../numbering";
 import { validationHook } from "../validate";
 
 export const projectRoutes = new Hono<{ Bindings: Env }>()
@@ -172,5 +173,44 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 			};
 			await db.insert(scenes).values(row);
 			return c.json(row, 201);
+		},
+	)
+	// 並べ替え（T-007 / T-017）。ids が今のシーンとちょうど同じ集合なら、その順で position を 0..n-1 に振り直す
+	.put(
+		"/:id/scenes/order",
+		zValidator("json", orderSchema, validationHook),
+		async (c) => {
+			const projectId = c.req.param("id");
+			const { ids } = c.req.valid("json");
+			const db = createDb(c.env.DB);
+			const project = await db
+				.select({ id: projects.id })
+				.from(projects)
+				.where(eq(projects.id, projectId))
+				.get();
+			if (!project) return c.json({ error: "not_found" as const }, 404);
+			const current = await db
+				.select({ id: scenes.id })
+				.from(scenes)
+				.where(eq(scenes.projectId, projectId));
+			if (
+				!sameIdSet(
+					ids,
+					current.map((s) => s.id),
+				)
+			) {
+				return c.json(
+					{
+						error: "validation" as const,
+						issues: [{ message: "ids must be exactly the current siblings" }],
+					},
+					400,
+				);
+			}
+			const [first, ...rest] = ids.map((id, position) =>
+				db.update(scenes).set({ position }).where(eq(scenes.id, id)),
+			);
+			if (first) await db.batch([first, ...rest]);
+			return c.body(null, 204);
 		},
 	);
