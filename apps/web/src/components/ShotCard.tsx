@@ -8,24 +8,22 @@ import { shotMeta } from "./shotMeta";
  * 作品ページのカード（設計書 §5.4）。
  * スマホ（< md）は「左にスケッチ・右に情報」の横並びで現場用の閲覧に、
  * PC（≥ md）は「サムネイル → メタ 1 行 → 内容 1 行」の縦並びで俯瞰に使う（T-014 / T-015）。
- * 空の項目は行ごと出さない。カード全体がカット編集へのリンク。
+ * 空の項目は行ごと出さない。カード全体がカット編集へのリンク（編集モード中はリンクにしない）。
  */
 export function ShotCard({
 	projectId,
 	aspectRatio,
 	shot,
+	editing = false,
 }: {
 	projectId: string;
 	aspectRatio: AspectRatio;
 	shot: Shot;
+	editing?: boolean;
 }) {
 	const [number, ...meta] = shotMeta(shot);
-	return (
-		<Link
-			to="/projects/$projectId/shots/$shotId"
-			params={{ projectId, shotId: shot.id }}
-			className="flex gap-3 md:block"
-		>
+	const body = (
+		<>
 			<div className="w-36 shrink-0 md:w-full">
 				<SketchThumb sketch={shot.sketch} aspectRatio={aspectRatio} />
 			</div>
@@ -54,6 +52,18 @@ export function ShotCard({
 					</p>
 				)}
 			</div>
+		</>
+	);
+	const className = "flex gap-3 md:block";
+	// 編集モードではタップでエディタに移らない（T-017。誤タップで並べ替え中の画面を離れない）
+	if (editing) return <div className={className}>{body}</div>;
+	return (
+		<Link
+			to="/projects/$projectId/shots/$shotId"
+			params={{ projectId, shotId: shot.id }}
+			className={className}
+		>
+			{body}
 		</Link>
 	);
 }
