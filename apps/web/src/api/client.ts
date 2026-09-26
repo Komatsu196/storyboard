@@ -1,7 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { hc, type InferResponseType } from "hono/client";
 import type { AppType } from "../../server/app";
-import type { AspectRatio, ShotFields } from "../../shared/schemas";
+import type {
+	AspectRatio,
+	ShotFields,
+	UpdateProject,
+	UpdateScene,
+} from "../../shared/schemas";
 import type { SketchData } from "../../shared/sketch/types";
 
 // セッション切れの 401 はログイン画面へ送る。
@@ -32,6 +37,12 @@ export type Shot = Scene["shots"][number];
 /** PATCH の応答（カット行。sketch は含まない） */
 export type ShotRow = InferResponseType<
 	(typeof api.shots)[":id"]["$patch"],
+	200
+>;
+
+/** PATCH /api/scenes/:id の応答（シーン行。shots は含まない） */
+export type SceneRow = InferResponseType<
+	(typeof api.scenes)[":id"]["$patch"],
 	200
 >;
 
@@ -146,4 +157,60 @@ export async function patchShot(
 		throw new Error(`patch shot: ${res.status}`);
 	}
 	return res.json();
+}
+
+export async function patchProject(
+	id: string,
+	input: UpdateProject,
+): Promise<Project> {
+	const res = await api.projects[":id"].$patch({ param: { id }, json: input });
+	if (res.status !== 200) throw new Error(`patch project: ${res.status}`);
+	return res.json();
+}
+
+export async function deleteProject(id: string): Promise<void> {
+	const res = await api.projects[":id"].$delete({ param: { id } });
+	if (res.status !== 204) throw new Error(`delete project: ${res.status}`);
+}
+
+export async function patchScene(
+	id: string,
+	input: UpdateScene,
+): Promise<SceneRow> {
+	const res = await api.scenes[":id"].$patch({ param: { id }, json: input });
+	if (res.status !== 200) throw new Error(`patch scene: ${res.status}`);
+	return res.json();
+}
+
+export async function deleteScene(id: string): Promise<void> {
+	const res = await api.scenes[":id"].$delete({ param: { id } });
+	if (res.status !== 204) throw new Error(`delete scene: ${res.status}`);
+}
+
+export async function deleteShot(id: string): Promise<void> {
+	const res = await api.shots[":id"].$delete({ param: { id } });
+	if (res.status !== 204) throw new Error(`delete shot: ${res.status}`);
+}
+
+/** 並べ替え（T-017）。兄弟の ids を新しい並び順で全部送る */
+export async function putSceneOrder(
+	projectId: string,
+	ids: string[],
+): Promise<void> {
+	const res = await api.projects[":id"].scenes.order.$put({
+		param: { id: projectId },
+		json: { ids },
+	});
+	if (res.status !== 204) throw new Error(`put scene order: ${res.status}`);
+}
+
+export async function putShotOrder(
+	sceneId: string,
+	ids: string[],
+): Promise<void> {
+	const res = await api.scenes[":id"].shots.order.$put({
+		param: { id: sceneId },
+		json: { ids },
+	});
+	if (res.status !== 204) throw new Error(`put shot order: ${res.status}`);
 }
