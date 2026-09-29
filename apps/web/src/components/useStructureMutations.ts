@@ -30,6 +30,7 @@ import {
 	type Scene,
 	type Shot,
 } from "../api/client";
+import { shotDeleteMessage } from "./shotMeta";
 
 type OrderRequest =
 	| { kind: "scenes"; ids: string[] }
@@ -151,7 +152,7 @@ export function useStructureMutations(projectId: string) {
 			sceneDelete.mutate(scene.id);
 		},
 		deleteShot: (shot: Shot) => {
-			if (!window.confirm(`C${shot.number} を削除しますか？`)) return;
+			if (!window.confirm(shotDeleteMessage(shot.number))) return;
 			setError(null);
 			shotDelete.mutate(shot.id);
 		},

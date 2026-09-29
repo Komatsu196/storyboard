@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, shotMeta } from "./shotMeta";
+import { formatDuration, shotDeleteMessage, shotMeta } from "./shotMeta";
 
 describe("formatDuration", () => {
 	it("appends 秒 and keeps decimals as typed", () => {
@@ -41,5 +41,17 @@ describe("shotMeta", () => {
 				durationSec: 0,
 			}),
 		).toEqual(["C3", "Dolly in", "0秒"]);
+	});
+});
+
+describe("shotDeleteMessage", () => {
+	it("names the shot by its number", () => {
+		expect(shotDeleteMessage("3")).toBe("C3 を削除しますか？");
+		expect(shotDeleteMessage("2A")).toBe("C2A を削除しますか？");
+	});
+
+	it("falls back to このカット when the number is empty", () => {
+		expect(shotDeleteMessage("")).toBe("このカットを削除しますか？");
+		expect(shotDeleteMessage("  ")).toBe("このカットを削除しますか？");
 	});
 });

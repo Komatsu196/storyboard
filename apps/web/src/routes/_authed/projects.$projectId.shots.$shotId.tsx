@@ -1,5 +1,9 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	type CSSProperties,
 	type ReactNode,
@@ -14,8 +18,9 @@ import {
 	toAspectRatio,
 } from "../../../shared/schemas";
 import { emptySketch, type SketchData } from "../../../shared/sketch/types";
-import { setShotFields, setShotSketch } from "../../api/cache";
+import { removeShot, setShotFields, setShotSketch } from "../../api/cache";
 import {
+	deleteShot,
 	type ProjectDetail,
 	patchShot,
 	projectQuery,
@@ -25,6 +30,7 @@ import {
 import { combineStatus, type SaveStatus } from "../../components/autosaver";
 import { NotFound } from "../../components/NotFound";
 import { ShotForm } from "../../components/ShotForm";
+import { shotDeleteMessage } from "../../components/shotMeta";
 import { useAutosave } from "../../components/useAutosave";
 import { SketchCanvas } from "../../sketch/SketchCanvas";
 import { Toolbar } from "../../sketch/Toolbar";
@@ -107,6 +113,28 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		? "unsaved"
 		: combineStatus(sketchSave.status, fieldsSave.status);
 
+	// 「このカットを削除」（T-023）。確認 → 保留中の自動保存を送り切る → DELETE → 作品ページへ → キャッシュから除く。
+	// 先に flush するのは、削除後に離脱時の flush が PUT / PATCH を送って 404 の再試行を繰り返さないため。
+	// キャッシュから除くのを遷移の後にするのは、表示中のエディタが NotFound に切り替わらないため（作品削除と同じ順序、T-019）
+	const navigate = useNavigate();
+	const removal = useMutation({
+		mutationFn: async () => {
+			await Promise.all([sketchSave.flush(), fieldsSave.flush()]);
+			await deleteShot(shot.id);
+		},
+		onSuccess: async () => {
+			await navigate({
+				to: "/projects/$projectId",
+				params: { projectId: project.id },
+			});
+			removeShot(queryClient, project.id, shot.id);
+		},
+	});
+	const onDelete = () => {
+		if (!window.confirm(shotDeleteMessage(fields.number))) return;
+		removal.mutate();
+	};
+
 	return (
 		<div className="flex min-h-dvh flex-col md:h-dvh md:flex-row">
 			{/* ステージ: ヘッダ＋キャンバス＋ツールバー。スマホは内容の高さ（下にフォームが続く）、PC は 1 画面（T-016） */}
@@ -172,6 +200,9 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 					fields={fields}
 					onChange={setFields}
 					onBlur={() => void fieldsSave.flush()}
+					onDelete={onDelete}
+					deleting={removal.isPending}
+					deleteError={removal.isError ? "削除に失敗しました" : null}
 				/>
 			</aside>
 		</div>

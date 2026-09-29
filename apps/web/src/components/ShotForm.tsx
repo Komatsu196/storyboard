@@ -12,6 +12,10 @@ type Props = {
 	onChange: (fields: ShotFields) => void;
 	/** 項目からフォーカスが外れたとき（親が自動保存の flush に使う） */
 	onBlur: () => void;
+	/** 「このカットを削除」（T-023）。確認・送信・遷移は親が持つ */
+	onDelete: () => void;
+	deleting: boolean;
+	deleteError: string | null;
 };
 
 const inputClass =
@@ -33,7 +37,14 @@ function chipClass(active: boolean) {
 }
 
 /** 8項目のうち画を除く 7 項目のフォーム（T-016、設計書 §6.5）。状態は親が持つ controlled */
-export function ShotForm({ fields, onChange, onBlur }: Props) {
+export function ShotForm({
+	fields,
+	onChange,
+	onBlur,
+	onDelete,
+	deleting,
+	deleteError,
+}: Props) {
 	const set = <K extends keyof ShotFields>(key: K, value: ShotFields[K]) =>
 		onChange({ ...fields, [key]: value });
 	const numberEmpty = fields.number.trim() === "";
@@ -137,6 +148,22 @@ export function ShotForm({ fields, onChange, onBlur }: Props) {
 					onChange={(v) => set("notes", v)}
 				/>
 			</Field>
+
+			<div className="mt-4 flex flex-col gap-1">
+				<button
+					type="button"
+					onClick={onDelete}
+					disabled={deleting}
+					className="block min-h-11 self-start rounded border border-red-600 px-3 text-red-600 disabled:opacity-40"
+				>
+					このカットを削除
+				</button>
+				{deleteError && (
+					<p role="alert" className="text-red-600 text-sm">
+						{deleteError}
+					</p>
+				)}
+			</div>
 		</form>
 	);
 }

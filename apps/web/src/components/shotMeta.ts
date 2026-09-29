@@ -20,3 +20,9 @@ export function shotMeta(shot: {
 	if (shot.durationSec !== null) parts.push(formatDuration(shot.durationSec));
 	return parts;
 }
+
+/** カット削除の確認文（T-017 / T-023）。番号が空のカット（エディタで消した直後）は「このカット」と呼ぶ */
+export function shotDeleteMessage(number: string): string {
+	const n = number.trim();
+	return n === "" ? "このカットを削除しますか？" : `C${n} を削除しますか？`;
+}
