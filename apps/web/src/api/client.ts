@@ -108,10 +108,14 @@ export async function createProject(input: {
 	return res.json();
 }
 
-export async function createScene(projectId: string): Promise<Scene> {
+/** 「＋シーン」。title は任意（T-022。空なら「タイトルなし」、番号はサーバーが採番） */
+export async function createScene(
+	projectId: string,
+	title = "",
+): Promise<Scene> {
 	const res = await api.projects[":id"].scenes.$post({
 		param: { id: projectId },
-		json: {},
+		json: { title },
 	});
 	if (res.status !== 201) throw new Error(`create scene: ${res.status}`);
 	return { ...(await res.json()), shots: [] };
