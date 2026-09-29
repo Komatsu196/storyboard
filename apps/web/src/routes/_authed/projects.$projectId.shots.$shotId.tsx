@@ -114,7 +114,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		: combineStatus(sketchSave.status, fieldsSave.status);
 
 	// 「このカットを削除」（T-023）。確認 → 保留中の自動保存を送り切る → DELETE → 作品ページへ → キャッシュから除く。
-	// 先に flush するのは、削除後に離脱時の flush が PUT / PATCH を送って 404 の再試行を繰り返さないため。
+	// 先に flush するのは、削除後に離脱時の flush が PUT / PATCH を送って 404 の再試行を繰り返さないため（flush が失敗して再試行が予約されていた場合だけは数回 404 になるが、許容する）。
 	// キャッシュから除くのを遷移の後にするのは、表示中のエディタが NotFound に切り替わらないため（作品削除と同じ順序、T-019）
 	const navigate = useNavigate();
 	const removal = useMutation({

@@ -71,7 +71,8 @@ export function NewSceneForm({
 					disabled={mutation.isPending}
 					onChange={(e) => setTitle(e.target.value)}
 					onKeyDown={(e) => {
-						if (e.key === "Escape") close();
+						// 日本語入力の変換中の Esc（変換の取り消し）では閉じない
+						if (e.key === "Escape" && !e.nativeEvent.isComposing) close();
 					}}
 					className="min-h-11 min-w-0 flex-1 rounded border px-2"
 				/>
