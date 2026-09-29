@@ -115,39 +115,48 @@ function ProjectPage() {
 				<p className="mb-4 text-gray-500">シーンがありません</p>
 			)}
 			{project.scenes.map((scene, i) => (
-				<section key={scene.id} className="mb-6">
-					<SceneHeader
-						scene={scene}
-						onAddShot={() => addShot.mutate(scene.id)}
-						disabled={busy}
-						edit={
-							editing
-								? {
-										isFirst: i === 0,
-										isLast: i === project.scenes.length - 1,
-										onMove: (delta) => structure.moveScene(scene.id, delta),
-										onDelete: () => structure.deleteScene(scene),
-										onCommit: (input) => structure.updateScene(scene.id, input),
-										disabled: structure.deleting,
-									}
-								: undefined
-						}
-					/>
-					<ShotGrid
-						projectId={project.id}
-						aspectRatio={aspectRatio}
-						shots={scene.shots}
-						edit={
-							editing
-								? {
-										onMove: (shotId, delta) =>
-											structure.moveShot(scene.id, shotId, delta),
-										onDelete: structure.deleteShot,
-										disabled: structure.deleting,
-									}
-								: undefined
-						}
-					/>
+				<section
+					key={scene.id}
+					className="mb-4 overflow-hidden rounded-lg border border-gray-300"
+				>
+					{/* シーン見出しはカード上端の帯（T-025） */}
+					<div className="border-gray-200 border-b bg-gray-50 px-3 py-2">
+						<SceneHeader
+							scene={scene}
+							onAddShot={() => addShot.mutate(scene.id)}
+							disabled={busy}
+							edit={
+								editing
+									? {
+											isFirst: i === 0,
+											isLast: i === project.scenes.length - 1,
+											onMove: (delta) => structure.moveScene(scene.id, delta),
+											onDelete: () => structure.deleteScene(scene),
+											onCommit: (input) =>
+												structure.updateScene(scene.id, input),
+											disabled: structure.deleting,
+										}
+									: undefined
+							}
+						/>
+					</div>
+					<div className="p-3">
+						<ShotGrid
+							projectId={project.id}
+							aspectRatio={aspectRatio}
+							shots={scene.shots}
+							edit={
+								editing
+									? {
+											onMove: (shotId, delta) =>
+												structure.moveShot(scene.id, shotId, delta),
+											onDelete: structure.deleteShot,
+											disabled: structure.deleting,
+										}
+									: undefined
+							}
+						/>
+					</div>
 				</section>
 			))}
 

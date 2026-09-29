@@ -41,7 +41,7 @@ export function SceneHeader({
 
 	if (!edit) {
 		return (
-			<div className="mb-2 flex items-center gap-3">
+			<div className="flex items-center gap-3">
 				<h2 className="font-bold">
 					S{scene.number}
 					{scene.title && (
@@ -56,7 +56,7 @@ export function SceneHeader({
 	}
 
 	return (
-		<div className="mb-2 flex items-center gap-2">
+		<div className="flex items-center gap-2">
 			<span className="font-bold">S</span>
 			<InlineField
 				label="シーン番号"
