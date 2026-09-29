@@ -1,11 +1,17 @@
 import { zValidator } from "@hono/zod-validator";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { Hono } from "hono";
-import { createProjectSchema, createSceneSchema } from "../../shared/schemas";
-import type { SketchData } from "../../shared/sketch/types";
+import {
+	createProjectSchema,
+	createSceneSchema,
+	orderSchema,
+	updateProjectSchema,
+} from "../../shared/schemas";
+import { recenterSketch } from "../../shared/sketch/recenter";
+import { canvasSizes, type SketchData } from "../../shared/sketch/types";
 import { createDb } from "../db";
 import { projects, scenes, shots, sketches } from "../db/schema";
-import { nextNumber, nextPosition } from "../numbering";
+import { nextNumber, nextPosition, sameIdSet } from "../numbering";
 import { validationHook } from "../validate";
 
 export const projectRoutes = new Hono<{ Bindings: Env }>()
@@ -76,6 +82,71 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 			})),
 		});
 	})
+	// 作品名・アスペクト比（T-019）。アスペクト比を指定したときは、その枠からずれているスケッチ
+	// （比率変更を取りこぼした分も含む）をすべて中央合わせに書き換え、作品行と一緒に
+	// 1 つの batch で書く（T-020。D1 の batch は原子的）
+	.patch(
+		"/:id",
+		zValidator("json", updateProjectSchema, validationHook),
+		async (c) => {
+			const id = c.req.param("id");
+			const input = c.req.valid("json");
+			const db = createDb(c.env.DB);
+			const current = await db
+				.select()
+				.from(projects)
+				.where(eq(projects.id, id))
+				.get();
+			if (!current) return c.json({ error: "not_found" as const }, 404);
+			const now = new Date().toISOString();
+			const updateProject = db
+				.update(projects)
+				.set({ ...input, updatedAt: now })
+				.where(eq(projects.id, id))
+				.returning();
+			// 比率を指定されたときだけ新しい枠の大きさ（指定がなければ null でスケッチは触らない）
+			const size =
+				input.aspectRatio !== undefined ? canvasSizes[input.aspectRatio] : null;
+			const rows = size
+				? await db
+						.select({ shotId: sketches.shotId, data: sketches.data })
+						.from(sketches)
+						.innerJoin(shots, eq(sketches.shotId, shots.id))
+						.innerJoin(scenes, eq(shots.sceneId, scenes.id))
+						.where(eq(scenes.projectId, id))
+				: [];
+			const updateSketches =
+				size === null
+					? []
+					: rows.flatMap((r) => {
+							const data = JSON.parse(r.data) as SketchData;
+							if (data.w === size.w && data.h === size.h) return [];
+							return [
+								db
+									.update(sketches)
+									.set({
+										data: JSON.stringify(recenterSketch(data, size)),
+										updatedAt: now,
+									})
+									.where(eq(sketches.shotId, r.shotId)),
+							];
+						});
+			const [updated] = await db.batch([updateProject, ...updateSketches]);
+			const row = updated[0];
+			if (!row) return c.json({ error: "not_found" as const }, 404);
+			return c.json(row);
+		},
+	)
+	// 物理削除。シーン・カット・スケッチは ON DELETE CASCADE で消える
+	.delete("/:id", async (c) => {
+		const row = await createDb(c.env.DB)
+			.delete(projects)
+			.where(eq(projects.id, c.req.param("id")))
+			.returning({ id: projects.id })
+			.get();
+		if (!row) return c.json({ error: "not_found" as const }, 404);
+		return c.body(null, 204);
+	})
 	.post(
 		"/:id/scenes",
 		zValidator("json", createSceneSchema, validationHook),
@@ -102,5 +173,44 @@ export const projectRoutes = new Hono<{ Bindings: Env }>()
 			};
 			await db.insert(scenes).values(row);
 			return c.json(row, 201);
+		},
+	)
+	// 並べ替え（T-007 / T-017）。ids が今のシーンとちょうど同じ集合なら、その順で position を 0..n-1 に振り直す
+	.put(
+		"/:id/scenes/order",
+		zValidator("json", orderSchema, validationHook),
+		async (c) => {
+			const projectId = c.req.param("id");
+			const { ids } = c.req.valid("json");
+			const db = createDb(c.env.DB);
+			const project = await db
+				.select({ id: projects.id })
+				.from(projects)
+				.where(eq(projects.id, projectId))
+				.get();
+			if (!project) return c.json({ error: "not_found" as const }, 404);
+			const current = await db
+				.select({ id: scenes.id })
+				.from(scenes)
+				.where(eq(scenes.projectId, projectId));
+			if (
+				!sameIdSet(
+					ids,
+					current.map((s) => s.id),
+				)
+			) {
+				return c.json(
+					{
+						error: "validation" as const,
+						issues: [{ message: "ids must be exactly the current siblings" }],
+					},
+					400,
+				);
+			}
+			const [first, ...rest] = ids.map((id, position) =>
+				db.update(scenes).set({ position }).where(eq(scenes.id, id)),
+			);
+			if (first) await db.batch([first, ...rest]);
+			return c.body(null, 204);
 		},
 	);

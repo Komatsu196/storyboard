@@ -3,11 +3,14 @@ import {
 	cameraMoves,
 	createProjectSchema,
 	createSceneSchema,
+	orderSchema,
 	pickShotFields,
 	shotFieldsEqual,
 	shotSizes,
 	toAspectRatio,
 	toShotSize,
+	updateProjectSchema,
+	updateSceneSchema,
 	updateShotSchema,
 } from "./schemas";
 
@@ -151,5 +154,60 @@ describe("pickShotFields / shotFieldsEqual", () => {
 		expect(shotFieldsEqual(a, pickShotFields(row))).toBe(true);
 		expect(shotFieldsEqual(a, { ...a, notes: "三脚" })).toBe(false);
 		expect(shotFieldsEqual(a, { ...a, durationSec: null })).toBe(false);
+	});
+});
+
+describe("updateProjectSchema", () => {
+	it("accepts a partial update without injecting defaults", () => {
+		expect(updateProjectSchema.parse({})).toEqual({});
+		expect(updateProjectSchema.parse({ title: "  New  " })).toEqual({
+			title: "New",
+		});
+		expect(updateProjectSchema.parse({ aspectRatio: "9:16" })).toEqual({
+			aspectRatio: "9:16",
+		});
+	});
+
+	it("rejects a blank title, a too-long title and an unknown aspect ratio", () => {
+		expect(updateProjectSchema.safeParse({ title: "  " }).success).toBe(false);
+		expect(
+			updateProjectSchema.safeParse({ title: "x".repeat(201) }).success,
+		).toBe(false);
+		expect(updateProjectSchema.safeParse({ aspectRatio: "1:1" }).success).toBe(
+			false,
+		);
+	});
+});
+
+describe("updateSceneSchema", () => {
+	it("trims the number and the title", () => {
+		expect(updateSceneSchema.parse({ number: " 2A ", title: " 夜 " })).toEqual({
+			number: "2A",
+			title: "夜",
+		});
+		expect(updateSceneSchema.parse({})).toEqual({});
+		expect(updateSceneSchema.parse({ title: "" })).toEqual({ title: "" });
+	});
+
+	it("rejects a blank or too-long number and a too-long title", () => {
+		expect(updateSceneSchema.safeParse({ number: " " }).success).toBe(false);
+		expect(
+			updateSceneSchema.safeParse({ number: "1".repeat(21) }).success,
+		).toBe(false);
+		expect(
+			updateSceneSchema.safeParse({ title: "x".repeat(201) }).success,
+		).toBe(false);
+	});
+});
+
+describe("orderSchema", () => {
+	it("accepts a list of ids, including an empty one", () => {
+		expect(orderSchema.parse({ ids: ["a", "b"] })).toEqual({ ids: ["a", "b"] });
+		expect(orderSchema.parse({ ids: [] })).toEqual({ ids: [] });
+	});
+
+	it("rejects a missing list or an empty id", () => {
+		expect(orderSchema.safeParse({}).success).toBe(false);
+		expect(orderSchema.safeParse({ ids: [""] }).success).toBe(false);
 	});
 });

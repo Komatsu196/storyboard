@@ -56,4 +56,14 @@ export const shotRoutes = new Hono<{ Bindings: Env }>()
 				});
 			return c.body(null, 204);
 		},
-	);
+	)
+	// 物理削除。スケッチは ON DELETE CASCADE で消える
+	.delete("/:id", async (c) => {
+		const row = await createDb(c.env.DB)
+			.delete(shots)
+			.where(eq(shots.id, c.req.param("id")))
+			.returning({ id: shots.id })
+			.get();
+		if (!row) return c.json({ error: "not_found" as const }, 404);
+		return c.body(null, 204);
+	});
