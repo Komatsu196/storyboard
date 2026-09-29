@@ -177,7 +177,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 	);
 }
 
-/** 内容に合わせて高さが伸びる複数行入力。CSS の field-sizing は Safari 未対応なので JS で合わせる */
+/**
+ * 内容に合わせて高さが伸びる複数行入力。CSS の field-sizing は Safari 未対応なので JS で合わせる。
+ * 伸びた下端がキーボードの裏に入らないよう、高さを合わせるたびに見える位置へスクロールする（T-024）
+ */
 function GrowingTextarea({
 	label,
 	value,
@@ -200,6 +203,7 @@ function GrowingTextarea({
 			value={value}
 			onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
 				fitHeight(e.target);
+				e.target.scrollIntoView({ block: "nearest" });
 				onChange(e.target.value);
 			}}
 			aria-label={label}
