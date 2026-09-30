@@ -5,16 +5,16 @@ export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-	"inline-flex touch-manipulation items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-40";
+	"inline-flex touch-manipulation items-center justify-center gap-1.5 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-40";
 
 // ghost は文字色を持たない（親から継ぐ。className="text-danger" で赤くできる）
 const variants: Record<ButtonVariant, string> = {
 	primary:
-		"bg-accent font-bold text-white hover:bg-accent-hover active:bg-accent-hover",
+		"bg-accent font-bold text-white enabled:hover:bg-accent-hover enabled:active:bg-accent-hover",
 	secondary:
-		"border border-line-strong bg-surface text-ink hover:bg-canvas active:bg-line",
+		"border border-line-strong bg-surface text-ink enabled:hover:bg-canvas enabled:active:bg-line",
 	danger:
-		"border border-danger/40 bg-surface text-danger hover:bg-danger/5 active:bg-danger/10",
+		"border border-danger/40 bg-surface text-danger enabled:hover:bg-danger/5 enabled:active:bg-danger/10",
 	ghost: "hover:bg-line/60 active:bg-line",
 };
 

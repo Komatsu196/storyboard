@@ -139,7 +139,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 					<Link
 						to="/projects/$projectId"
 						params={{ projectId: project.id }}
-						className={`${buttonClass({ variant: "ghost" })} min-w-0`}
+						className={buttonClass({ variant: "ghost" })}
 					>
 						<ChevronLeft aria-hidden className="size-5 shrink-0" />
 						<span className="truncate">{project.title}</span>
