@@ -6,6 +6,8 @@ import {
 	useState,
 } from "react";
 import { cameraMoves, type ShotFields, shotSizes } from "../../shared/schemas";
+import { Button } from "./ui/Button";
+import { fieldClass } from "./ui/field";
 
 type Props = {
 	fields: ShotFields;
@@ -18,8 +20,7 @@ type Props = {
 	deleteError: string | null;
 };
 
-const inputClass =
-	"min-h-11 w-full rounded border border-gray-300 bg-white px-3 py-2";
+const inputClass = `${fieldClass()} w-full`;
 
 /** 複数行入力の高さを内容に合わせる。scrollHeight は padding まで、border-box なので枠線ぶんを足す */
 function fitHeight(el: HTMLTextAreaElement) {
@@ -28,11 +29,11 @@ function fitHeight(el: HTMLTextAreaElement) {
 }
 
 function chipClass(active: boolean) {
-	// 44px 以上のタップ目標、ダブルタップでのズームを止める（ツールバーと同じ）
-	return `min-h-11 touch-manipulation rounded border px-3 text-sm ${
+	// 44px 以上のタップ目標、ダブルタップでのズームを止める（ツールバーと同じ）。選択中は差し色（D-017）
+	return `min-h-11 touch-manipulation rounded-md border px-3 text-sm ${
 		active
-			? "border-black bg-black text-white"
-			: "border-gray-300 bg-white active:bg-gray-100"
+			? "border-accent bg-accent text-white"
+			: "border-line-strong bg-surface active:bg-canvas"
 	}`;
 }
 
@@ -64,11 +65,11 @@ export function ShotForm({
 						maxLength={20}
 						aria-label="カット番号"
 						aria-invalid={numberEmpty}
-						className={`${inputClass} ${numberEmpty ? "border-red-500" : ""}`}
+						className={`${fieldClass(numberEmpty)} w-full`}
 					/>
 				</div>
 				{numberEmpty && (
-					<p className="text-red-600 text-xs">番号を入れるまで保存されません</p>
+					<p className="text-danger text-xs">番号を入れるまで保存されません</p>
 				)}
 			</Field>
 
@@ -150,16 +151,16 @@ export function ShotForm({
 			</Field>
 
 			<div className="mt-4 flex flex-col gap-1">
-				<button
-					type="button"
+				<Button
+					variant="danger"
 					onClick={onDelete}
 					disabled={deleting}
-					className="block min-h-11 self-start rounded border border-red-600 px-3 text-red-600 disabled:opacity-40"
+					className="self-start"
 				>
 					このカットを削除
-				</button>
+				</Button>
 				{deleteError && (
-					<p role="alert" className="text-red-600 text-sm">
+					<p role="alert" className="text-danger text-sm">
 						{deleteError}
 					</p>
 				)}
@@ -171,7 +172,7 @@ export function ShotForm({
 function Field({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="flex flex-col gap-1">
-			<span className="text-gray-600 text-xs">{label}</span>
+			<span className="text-ink-muted text-xs">{label}</span>
 			{children}
 		</div>
 	);
@@ -245,7 +246,7 @@ function DurationInput({
 				}}
 				aria-label="尺（秒）"
 				aria-invalid={invalid}
-				className={`${inputClass} w-28 ${invalid ? "border-red-500" : ""}`}
+				className={`${fieldClass(invalid)} w-28`}
 			/>
 			<span>秒</span>
 		</div>

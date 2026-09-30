@@ -225,7 +225,7 @@ export function SketchCanvas({
 		>
 			{/* この箱がフレーム枠。canvas は透明で、白背景と枠線は箱が持つ */}
 			<div
-				className="relative select-none border border-gray-400 bg-white shadow-sm [-webkit-touch-callout:none]"
+				className="relative select-none border border-line-strong bg-white shadow-sm [-webkit-touch-callout:none]"
 				style={{ width: size.w, height: size.h }}
 			>
 				<canvas
