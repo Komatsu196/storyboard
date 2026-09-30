@@ -13,6 +13,7 @@ import {
 import { appendScene, appendShot } from "../../api/cache";
 import { createScene, createShot, projectQuery } from "../../api/client";
 import { InlineField } from "../../components/InlineField";
+import { NewSceneForm } from "../../components/NewSceneForm";
 import { SceneHeader } from "../../components/SceneHeader";
 import { ShotGrid } from "../../components/ShotGrid";
 import { useStructureMutations } from "../../components/useStructureMutations";
@@ -31,10 +32,8 @@ function ProjectPage() {
 	const [editing, setEditing] = useState(false);
 	const structure = useStructureMutations(project.id);
 
-	const addScene = useMutation({
-		mutationFn: () => createScene(project.id),
-		onSuccess: (scene) => appendScene(queryClient, project.id, scene),
-	});
+	// ＋シーンの送信中（NewSceneForm から受け取る）。送信中は ＋カット を止める
+	const [creatingScene, setCreatingScene] = useState(false);
 
 	// 「＋カット → 即エディタ」。sceneId 省略時は最後のシーン（無ければ作ってから）
 	const addShot = useMutation({
@@ -55,7 +54,7 @@ function ProjectPage() {
 				params: { projectId: project.id, shotId: shot.id },
 			}),
 	});
-	const busy = addScene.isPending || addShot.isPending;
+	const busy = creatingScene || addShot.isPending;
 
 	return (
 		<main className="p-4 pb-24 md:pb-4">
@@ -116,51 +115,57 @@ function ProjectPage() {
 				<p className="mb-4 text-gray-500">シーンがありません</p>
 			)}
 			{project.scenes.map((scene, i) => (
-				<section key={scene.id} className="mb-6">
-					<SceneHeader
-						scene={scene}
-						onAddShot={() => addShot.mutate(scene.id)}
-						disabled={busy}
-						edit={
-							editing
-								? {
-										isFirst: i === 0,
-										isLast: i === project.scenes.length - 1,
-										onMove: (delta) => structure.moveScene(scene.id, delta),
-										onDelete: () => structure.deleteScene(scene),
-										onCommit: (input) => structure.updateScene(scene.id, input),
-										disabled: structure.deleting,
-									}
-								: undefined
-						}
-					/>
-					<ShotGrid
-						projectId={project.id}
-						aspectRatio={aspectRatio}
-						shots={scene.shots}
-						edit={
-							editing
-								? {
-										onMove: (shotId, delta) =>
-											structure.moveShot(scene.id, shotId, delta),
-										onDelete: structure.deleteShot,
-										disabled: structure.deleting,
-									}
-								: undefined
-						}
-					/>
+				<section
+					key={scene.id}
+					className="mb-4 overflow-hidden rounded-lg border border-gray-300"
+				>
+					{/* シーン見出しはカード上端の帯（T-025） */}
+					<div className="border-gray-200 border-b bg-gray-50 px-3 py-2">
+						<SceneHeader
+							scene={scene}
+							onAddShot={() => addShot.mutate(scene.id)}
+							disabled={busy}
+							edit={
+								editing
+									? {
+											isFirst: i === 0,
+											isLast: i === project.scenes.length - 1,
+											onMove: (delta) => structure.moveScene(scene.id, delta),
+											onDelete: () => structure.deleteScene(scene),
+											onCommit: (input) =>
+												structure.updateScene(scene.id, input),
+											disabled: structure.deleting,
+										}
+									: undefined
+							}
+						/>
+					</div>
+					<div className="p-3">
+						<ShotGrid
+							projectId={project.id}
+							aspectRatio={aspectRatio}
+							shots={scene.shots}
+							edit={
+								editing
+									? {
+											onMove: (shotId, delta) =>
+												structure.moveShot(scene.id, shotId, delta),
+											onDelete: structure.deleteShot,
+											disabled: structure.deleting,
+										}
+									: undefined
+							}
+						/>
+					</div>
 				</section>
 			))}
 
-			<div className="flex gap-2">
-				<button
-					type="button"
-					onClick={() => addScene.mutate()}
+			<div className="flex flex-wrap gap-2">
+				<NewSceneForm
+					projectId={project.id}
 					disabled={busy}
-					className="rounded border px-3 py-2 disabled:opacity-40"
-				>
-					＋シーン
-				</button>
+					onPendingChange={setCreatingScene}
+				/>
 				{project.scenes.length === 0 && (
 					<button
 						type="button"
@@ -172,7 +177,7 @@ function ProjectPage() {
 					</button>
 				)}
 			</div>
-			{(addScene.isError || addShot.isError) && (
+			{addShot.isError && (
 				<p className="mt-2 text-red-600 text-sm">
 					作成に失敗しました。もう一度試してください。
 				</p>

@@ -13,7 +13,10 @@ export type SceneEdit = {
 	disabled?: boolean;
 };
 
-/** シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、前へ / 後へ / 削除 が出る（T-017 / T-018） */
+/**
+ * シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、同じ行の右端に ▲▼✕ が出る（T-017 / T-018 / T-021）。
+ * 編集モード中は「＋カット」を出さない（シーンの操作とカットの操作を見分けやすくするため）
+ */
 export function SceneHeader({
 	scene,
 	onAddShot,
@@ -38,7 +41,7 @@ export function SceneHeader({
 
 	if (!edit) {
 		return (
-			<div className="mb-2 flex items-center gap-3">
+			<div className="flex items-center gap-3">
 				<h2 className="font-bold">
 					S{scene.number}
 					{scene.title && (
@@ -53,38 +56,32 @@ export function SceneHeader({
 	}
 
 	return (
-		<div className="mb-2 flex flex-col gap-2">
-			<div className="flex items-center gap-2">
-				<span className="font-bold">S</span>
-				<InlineField
-					label="シーン番号"
-					value={scene.number}
-					required
-					maxLength={20}
-					onCommit={(number) => edit.onCommit({ number })}
-					className="w-16 font-bold"
-				/>
-				<InlineField
-					label="シーンのタイトル"
-					value={scene.title}
-					placeholder="タイトル"
-					maxLength={200}
-					onCommit={(title) => edit.onCommit({ title })}
-					className="min-w-0 flex-1"
-				/>
-			</div>
-			<div className="flex items-center gap-2">
-				{addShot}
-				<div className="flex-1">
-					<ItemActions
-						isFirst={edit.isFirst}
-						isLast={edit.isLast}
-						onMove={edit.onMove}
-						onDelete={edit.onDelete}
-						disabled={edit.disabled}
-					/>
-				</div>
-			</div>
+		<div className="flex items-center gap-2">
+			<span className="font-bold">S</span>
+			<InlineField
+				label="シーン番号"
+				value={scene.number}
+				required
+				maxLength={20}
+				onCommit={(number) => edit.onCommit({ number })}
+				className="w-16 font-bold"
+			/>
+			<InlineField
+				label="シーンのタイトル"
+				value={scene.title}
+				placeholder="タイトル"
+				maxLength={200}
+				onCommit={(title) => edit.onCommit({ title })}
+				className="min-w-0 flex-1"
+			/>
+			<ItemActions
+				variant="icon"
+				isFirst={edit.isFirst}
+				isLast={edit.isLast}
+				onMove={edit.onMove}
+				onDelete={edit.onDelete}
+				disabled={edit.disabled}
+			/>
 		</div>
 	);
 }

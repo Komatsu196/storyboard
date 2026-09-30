@@ -12,7 +12,7 @@ export type ShotEdit = {
 
 /**
  * カットの一覧。スマホ 1 列（横並びカード）、PC 3〜5 列（設計書 §5.4）。カードの形は ShotCard が持つ。
- * edit があるとき（編集モード）はカードの下に 前へ / 後へ / 削除 を出す（T-017）
+ * edit があるとき（編集モード）はカードの下に 前へ / 後へ / カットを削除 を出す（T-017 / T-021）
  */
 export function ShotGrid({
 	projectId,
