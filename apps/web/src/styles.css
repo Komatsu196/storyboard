@@ -1,9 +1,37 @@
 @import "tailwindcss";
 
-/* 描画中の引っ張り更新・ゴム戻りを止める（設計書 §6.3。キャンバスの外は通常どおりスクロールできる） */
+/* 見た目の決まり（D-017 / T-026、設計書 §5.7）。各画面は gray/black/red を直書きせず、この名前で書く */
+@theme {
+	--color-canvas: #fafaf9;
+	--color-surface: #ffffff;
+	--color-line: #e7e5e4;
+	--color-line-strong: #d6d3d1;
+	--color-ink: #1c1917;
+	--color-ink-muted: #78716c;
+	--color-accent: #3b5ba5;
+	--color-accent-hover: #2f4a88;
+	--color-accent-soft: #eef2fa;
+	--color-danger: #b91c1c;
+}
+
 @layer base {
+	/* 描画中の引っ張り更新・ゴム戻りを止める（設計書 §6.3。キャンバスの外は通常どおりスクロールできる） */
 	html,
 	body {
 		overscroll-behavior: none;
+	}
+
+	body {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+
+	/* 色を指定しない border / divide は line にする（Tailwind v4 の既定は currentColor） */
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-line);
 	}
 }

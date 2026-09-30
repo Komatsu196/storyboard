@@ -4,13 +4,8 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-	type CSSProperties,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useState,
-} from "react";
+import { ChevronLeft, Redo2, Trash2, Undo2 } from "lucide-react";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import {
 	pickShotFields,
 	type ShotFields,
@@ -31,6 +26,7 @@ import { combineStatus, type SaveStatus } from "../../components/autosaver";
 import { NotFound } from "../../components/NotFound";
 import { ShotForm } from "../../components/ShotForm";
 import { shotDeleteMessage } from "../../components/shotMeta";
+import { Button, buttonClass } from "../../components/ui/Button";
 import { useAutosave } from "../../components/useAutosave";
 import { SketchCanvas } from "../../sketch/SketchCanvas";
 import { Toolbar } from "../../sketch/Toolbar";
@@ -139,46 +135,50 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 		<div className="flex min-h-dvh flex-col md:h-dvh md:flex-row">
 			{/* ステージ: ヘッダ＋キャンバス＋ツールバー。スマホは内容の高さ（下にフォームが続く）、PC は 1 画面（T-016） */}
 			<div className="flex touch-manipulation flex-col md:h-full md:min-w-0 md:flex-1">
-				<header className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
+				<header className="flex h-12 shrink-0 items-center gap-1 border-line border-b bg-surface px-1">
 					<Link
 						to="/projects/$projectId"
 						params={{ projectId: project.id }}
-						className="truncate text-sm underline"
+						className={buttonClass({ variant: "ghost" })}
 					>
-						← {project.title}
+						<ChevronLeft aria-hidden className="size-5 shrink-0" />
+						<span className="truncate">{project.title}</span>
 					</Link>
 					<span className="shrink-0 font-bold">C{fields.number}</span>
 					<span
-						className={`shrink-0 text-xs ${status === "unsaved" ? "text-red-600" : "text-gray-500"}`}
+						className={`shrink-0 text-xs ${status === "unsaved" ? "text-danger" : "text-ink-muted"}`}
 					>
 						{statusLabels[status]}
 					</span>
 					<span className="flex-1" />
-					<HeaderButton
-						label="戻す"
+					<Button
+						variant="ghost"
+						icon={Undo2}
+						aria-label="戻す"
 						onClick={editor.undo}
 						disabled={!editor.canUndo}
-					>
-						↶
-					</HeaderButton>
-					<HeaderButton
-						label="やり直す"
+						className="shrink-0"
+					/>
+					<Button
+						variant="ghost"
+						icon={Redo2}
+						aria-label="やり直す"
 						onClick={editor.redo}
 						disabled={!editor.canRedo}
-					>
-						↷
-					</HeaderButton>
-					<HeaderButton
-						label="全消し"
+						className="shrink-0"
+					/>
+					<Button
+						variant="ghost"
+						icon={Trash2}
+						aria-label="全消し"
 						onClick={editor.clear}
 						disabled={editor.sketch.strokes.length === 0}
-					>
-						🗑
-					</HeaderButton>
+						className="shrink-0"
+					/>
 				</header>
 				{/* スマホ: 幅 × h/w の高さ（上限は画面 − ヘッダ − ツールバー）。PC: 残りの高さいっぱい */}
 				<div
-					className="max-md:aspect-(--canvas-ar) max-md:max-h-[calc(100dvh-6.5rem)] bg-gray-100 p-2 md:min-h-0 md:flex-1"
+					className="max-md:aspect-(--canvas-ar) max-md:max-h-[calc(100dvh-6.5rem)] bg-canvas p-2 md:min-h-0 md:flex-1"
 					style={
 						{ "--canvas-ar": `${initial.w} / ${initial.h}` } as CSSProperties
 					}
@@ -195,7 +195,7 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 				<Toolbar tool={editor.tool} onChange={editor.setTool} />
 			</div>
 			{/* フォーム: スマホはツールバーの直下、PC は右列で独立にスクロール */}
-			<aside className="border-t md:w-80 md:overflow-y-auto md:border-t-0 md:border-l lg:w-96">
+			<aside className="border-line border-t bg-surface md:w-80 md:overflow-y-auto md:border-t-0 md:border-l lg:w-96">
 				<ShotForm
 					fields={fields}
 					onChange={setFields}
@@ -206,30 +206,5 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 				/>
 			</aside>
 		</div>
-	);
-}
-
-function HeaderButton({
-	label,
-	onClick,
-	disabled,
-	children,
-}: {
-	label: string;
-	onClick: () => void;
-	disabled?: boolean;
-	children: ReactNode;
-}) {
-	return (
-		<button
-			type="button"
-			aria-label={label}
-			title={label}
-			onClick={onClick}
-			disabled={disabled}
-			className="min-h-11 min-w-11 touch-manipulation rounded text-xl disabled:opacity-30"
-		>
-			{children}
-		</button>
 	);
 }

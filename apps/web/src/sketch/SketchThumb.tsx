@@ -37,7 +37,7 @@ export function SketchThumb({
 	return (
 		<canvas
 			ref={ref}
-			className="block w-full border border-gray-400 bg-white"
+			className="block w-full rounded-sm border border-line-strong bg-white"
 			style={{ aspectRatio: `${w} / ${h}` }}
 		/>
 	);

@@ -31,7 +31,7 @@ export function ShotCard({
 				<div>
 					<span className="font-bold">{number}</span>
 					{meta.length > 0 && (
-						<span className="ml-2 text-gray-600">{meta.join("　")}</span>
+						<span className="ml-2 text-ink-muted">{meta.join("　")}</span>
 					)}
 				</div>
 				{shot.action !== "" && (
@@ -41,13 +41,13 @@ export function ShotCard({
 				)}
 				{shot.dialogue !== "" && (
 					<p className="mt-1 whitespace-pre-wrap md:hidden">
-						<span className="mr-1 text-gray-500 text-xs">セリフ</span>
+						<span className="mr-1 text-ink-muted text-xs">セリフ</span>
 						{shot.dialogue}
 					</p>
 				)}
 				{shot.notes !== "" && (
 					<p className="mt-1 whitespace-pre-wrap md:hidden">
-						<span className="mr-1 text-gray-500 text-xs">備考</span>
+						<span className="mr-1 text-ink-muted text-xs">備考</span>
 						{shot.notes}
 					</p>
 				)}

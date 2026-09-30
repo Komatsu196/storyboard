@@ -1,3 +1,4 @@
+import { Eraser } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
 	type StrokeColor,
@@ -5,19 +6,26 @@ import {
 	strokeColors,
 	strokeSizes,
 } from "../../shared/sketch/types";
+import { displayColor } from "./render";
 import type { Tool } from "./useSketchEditor";
 
 const colorLabels: Record<StrokeColor, string> = { black: "黒", red: "赤" };
 const sizeLabels: Record<StrokeSize, string> = { 1: "細", 2: "中", 3: "太" };
+// 太さの点の直径（4 / 8 / 12px）
+const sizeDots: Record<StrokeSize, string> = {
+	1: "size-1",
+	2: "size-2",
+	3: "size-3",
+};
 
-function buttonClass(active: boolean, activeClass = "bg-black text-white") {
-	// 44px 以上のタップ目標、ダブルタップでのズームを止める（touch-manipulation）
-	return `min-h-11 min-w-11 flex-1 touch-manipulation rounded text-sm ${
-		active ? activeClass : "bg-gray-100 active:bg-gray-200"
+function toolClass(active: boolean) {
+	// 44px 以上のタップ目標、ダブルタップでのズームを止める（touch-manipulation）。選択中は薄い藍の地＋藍の輪（T-027）
+	return `flex min-h-11 min-w-11 flex-1 touch-manipulation items-center justify-center rounded-md ${
+		active ? "bg-accent-soft ring-2 ring-accent ring-inset" : "active:bg-line"
 	}`;
 }
 
-/** 黒・赤｜細・中・太｜消しゴム の 6 個（戻す・やり直す・全消しはヘッダ側。T-013） */
+/** 黒・赤（色見本）｜細・中・太（点）｜消しゴム（アイコン）の 6 個（戻す・やり直す・全消しはヘッダ側。T-013 / T-027） */
 export function Toolbar({
 	tool,
 	onChange,
@@ -36,7 +44,7 @@ export function Toolbar({
 	});
 	return (
 		<div
-			className="flex shrink-0 items-center gap-1 border-t bg-white p-1 md:pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+			className="flex shrink-0 items-center gap-1 border-line border-t bg-surface p-1 md:pb-[max(0.25rem,env(safe-area-inset-bottom))]"
 			role="toolbar"
 			aria-label="ツール"
 		>
@@ -44,36 +52,46 @@ export function Toolbar({
 				<button
 					key={color}
 					type="button"
+					aria-label={colorLabels[color]}
+					title={colorLabels[color]}
 					aria-pressed={isPen && tool.color === color}
-					className={buttonClass(
-						isPen && tool.color === color,
-						color === "red" ? "bg-red-600 text-white" : "bg-black text-white",
-					)}
+					className={toolClass(isPen && tool.color === color)}
 					{...select({ ...tool, mode: "pen", color })}
 				>
-					{colorLabels[color]}
+					<span
+						aria-hidden
+						className="size-5 rounded-full"
+						style={{ backgroundColor: displayColor[color] }}
+					/>
 				</button>
 			))}
-			<span className="mx-1 h-6 w-px bg-gray-300" />
+			<span className="mx-1 h-6 w-px bg-line" />
 			{strokeSizes.map((size) => (
 				<button
 					key={size}
 					type="button"
+					aria-label={sizeLabels[size]}
+					title={sizeLabels[size]}
 					aria-pressed={isPen && tool.size === size}
-					className={buttonClass(isPen && tool.size === size)}
+					className={toolClass(isPen && tool.size === size)}
 					{...select({ ...tool, mode: "pen", size })}
 				>
-					{sizeLabels[size]}
+					<span
+						aria-hidden
+						className={`${sizeDots[size]} rounded-full bg-ink`}
+					/>
 				</button>
 			))}
-			<span className="mx-1 h-6 w-px bg-gray-300" />
+			<span className="mx-1 h-6 w-px bg-line" />
 			<button
 				type="button"
+				aria-label="消しゴム"
+				title="消しゴム"
 				aria-pressed={tool.mode === "eraser"}
-				className={buttonClass(tool.mode === "eraser")}
+				className={toolClass(tool.mode === "eraser")}
 				{...select({ ...tool, mode: "eraser" })}
 			>
-				消しゴム
+				<Eraser aria-hidden className="size-5" />
 			</button>
 		</div>
 	);

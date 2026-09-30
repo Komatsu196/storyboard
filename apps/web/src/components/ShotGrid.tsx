@@ -26,7 +26,7 @@ export function ShotGrid({
 	edit?: ShotEdit;
 }) {
 	if (shots.length === 0) {
-		return <p className="text-gray-400 text-sm">カットがありません</p>;
+		return <p className="text-ink-muted text-sm">カットがありません</p>;
 	}
 	return (
 		<ul className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5">
