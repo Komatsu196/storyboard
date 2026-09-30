@@ -22,7 +22,7 @@ function ProjectError({ error }: ErrorComponentProps) {
 			<button
 				type="button"
 				onClick={() => location.reload()}
-				className="mt-2 underline"
+				className="mt-2 text-accent underline"
 			>
 				再読み込み
 			</button>

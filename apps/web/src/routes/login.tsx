@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { login, sessionQuery } from "../api/client";
+import { Button } from "../components/ui/Button";
+import { fieldClass } from "../components/ui/field";
 
 type LoginSearch = { redirect?: string };
 
@@ -42,26 +44,30 @@ function LoginPage() {
 	};
 
 	return (
-		<main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-6">
-			<h1 className="font-bold text-xl">Storyboard</h1>
-			<form onSubmit={onSubmit} className="flex flex-col gap-3">
-				<input
-					type="password"
-					autoComplete="current-password"
-					value={password}
-					onChange={(e) => setPassword(e.target.value)}
-					placeholder="パスワード"
-					className="rounded border px-3 py-2"
-				/>
-				<button
-					type="submit"
-					disabled={mutation.isPending || password === ""}
-					className="rounded bg-black px-3 py-2 text-white disabled:opacity-40"
-				>
-					ログイン
-				</button>
-				{failed && <p className="text-red-600 text-sm">パスワードが違います</p>}
-			</form>
+		<main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center p-6">
+			<div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-6">
+				<h1 className="font-bold text-xl">Storyboard</h1>
+				<form onSubmit={onSubmit} className="flex flex-col gap-3">
+					<input
+						type="password"
+						autoComplete="current-password"
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						placeholder="パスワード"
+						className={`${fieldClass()} w-full`}
+					/>
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={mutation.isPending || password === ""}
+					>
+						ログイン
+					</Button>
+					{failed && (
+						<p className="text-danger text-sm">パスワードが違います</p>
+					)}
+				</form>
+			</div>
 		</main>
 	);
 }
