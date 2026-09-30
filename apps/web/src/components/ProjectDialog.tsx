@@ -7,6 +7,8 @@ import {
 	DEFAULT_ASPECT_RATIO,
 } from "../../shared/schemas";
 import { createProject, projectsQuery } from "../api/client";
+import { Button } from "./ui/Button";
+import { fieldClass } from "./ui/field";
 
 /** 「＋作品」ボタンと、タイトル＋アスペクト比を入れる <dialog> */
 export function NewProjectButton() {
@@ -36,13 +38,9 @@ export function NewProjectButton() {
 
 	return (
 		<>
-			<button
-				type="button"
-				onClick={() => dialogRef.current?.showModal()}
-				className="rounded bg-black px-3 py-2 text-sm text-white"
-			>
+			<Button variant="primary" onClick={() => dialogRef.current?.showModal()}>
 				＋作品
-			</button>
+			</Button>
 			<dialog
 				ref={dialogRef}
 				onClose={() => {
@@ -50,7 +48,7 @@ export function NewProjectButton() {
 					setAspectRatio(DEFAULT_ASPECT_RATIO);
 					mutation.reset();
 				}}
-				className="m-auto w-80 rounded-lg p-4 shadow-lg backdrop:bg-black/40"
+				className="m-auto w-80 rounded-xl bg-surface p-5 text-ink shadow-lg backdrop:bg-black/40"
 			>
 				<form onSubmit={onSubmit} className="flex flex-col gap-3">
 					<h2 className="font-bold">新しい作品</h2>
@@ -59,14 +57,14 @@ export function NewProjectButton() {
 						onChange={(e) => setTitle(e.target.value)}
 						placeholder="タイトル"
 						aria-label="タイトル"
-						className="rounded border px-3 py-2"
+						className={`${fieldClass()} w-full`}
 					/>
 					<label className="flex items-center justify-between text-sm">
 						アスペクト比
 						<select
 							value={aspectRatio}
 							onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-							className="rounded border px-2 py-1"
+							className={fieldClass()}
 						>
 							{aspectRatios.map((r) => (
 								<option key={r} value={r}>
@@ -76,23 +74,19 @@ export function NewProjectButton() {
 						</select>
 					</label>
 					<div className="flex justify-end gap-2">
-						<button
-							type="button"
-							onClick={() => dialogRef.current?.close()}
-							className="rounded border px-3 py-2 text-sm"
-						>
+						<Button onClick={() => dialogRef.current?.close()}>
 							キャンセル
-						</button>
-						<button
+						</Button>
+						<Button
 							type="submit"
+							variant="primary"
 							disabled={mutation.isPending || title.trim() === ""}
-							className="rounded bg-black px-3 py-2 text-sm text-white disabled:opacity-40"
 						>
 							作成
-						</button>
+						</Button>
 					</div>
 					{mutation.isError && (
-						<p className="text-red-600 text-sm">作成に失敗しました</p>
+						<p className="text-danger text-sm">作成に失敗しました</p>
 					)}
 				</form>
 			</dialog>
