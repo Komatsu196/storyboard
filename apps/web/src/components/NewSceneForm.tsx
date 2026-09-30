@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { appendScene } from "../api/cache";
 import { createScene } from "../api/client";
-
-const button = "min-h-11 rounded border px-3 disabled:opacity-40";
+import { Button } from "./ui/Button";
+import { fieldClass } from "./ui/field";
 
 /**
  * 作品ページ末尾の「＋シーン」（T-022、設計書 §5.6）。押すとその場でタイトル（任意）の入力欄＋「追加」「やめる」に変わる。
@@ -42,14 +42,9 @@ export function NewSceneForm({
 
 	if (!open) {
 		return (
-			<button
-				type="button"
-				onClick={() => setOpen(true)}
-				disabled={disabled}
-				className={button}
-			>
+			<Button onClick={() => setOpen(true)} disabled={disabled}>
 				＋シーン
-			</button>
+			</Button>
 		);
 	}
 
@@ -74,22 +69,17 @@ export function NewSceneForm({
 						// 日本語入力の変換中の Esc（変換の取り消し）では閉じない
 						if (e.key === "Escape" && !e.nativeEvent.isComposing) close();
 					}}
-					className="min-h-11 min-w-0 flex-1 rounded border px-2"
+					className={`${fieldClass()} min-w-0 flex-1`}
 				/>
-				<button type="submit" disabled={mutation.isPending} className={button}>
+				<Button type="submit" disabled={mutation.isPending}>
 					追加
-				</button>
-				<button
-					type="button"
-					onClick={close}
-					disabled={mutation.isPending}
-					className={button}
-				>
+				</Button>
+				<Button variant="ghost" onClick={close} disabled={mutation.isPending}>
 					やめる
-				</button>
+				</Button>
 			</div>
 			{mutation.isError && (
-				<p className="text-red-600 text-sm">
+				<p className="text-danger text-sm">
 					作成に失敗しました。もう一度試してください。
 				</p>
 			)}

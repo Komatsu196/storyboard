@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fieldClass } from "./ui/field";
 
 /**
  * 編集モードの 1 行入力（T-018 / T-019）。フォーカスの間だけ下書きを持ち、フォーカスが外れたとき / Enter で確定する。
@@ -45,7 +46,7 @@ export function InlineField({
 			onKeyDown={(e) => {
 				if (e.key === "Enter") e.currentTarget.blur();
 			}}
-			className={`min-h-11 rounded border px-2 ${className}`}
+			className={`${fieldClass()} ${className}`}
 		/>
 	);
 }

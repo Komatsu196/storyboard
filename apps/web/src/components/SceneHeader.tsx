@@ -3,6 +3,7 @@ import type { UpdateScene } from "../../shared/schemas";
 import type { Scene } from "../api/client";
 import { InlineField } from "./InlineField";
 import { ItemActions } from "./ItemActions";
+import { Button } from "./ui/Button";
 
 export type SceneEdit = {
 	isFirst: boolean;
@@ -14,7 +15,7 @@ export type SceneEdit = {
 };
 
 /**
- * シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、同じ行の右端に ▲▼✕ が出る（T-017 / T-018 / T-021）。
+ * シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、同じ行の右端に 上・下・✕ のアイコンが出る（T-017 / T-018 / T-021）。
  * 編集モード中は「＋カット」を出さない（シーンの操作とカットの操作を見分けやすくするため）
  */
 export function SceneHeader({
@@ -29,25 +30,18 @@ export function SceneHeader({
 	edit?: SceneEdit;
 }) {
 	const addShot = (
-		<button
-			type="button"
-			onClick={onAddShot}
-			disabled={disabled}
-			className="rounded border px-2 py-1 text-sm disabled:opacity-40"
-		>
+		<Button size="sm" onClick={onAddShot} disabled={disabled}>
 			＋カット
-		</button>
+		</Button>
 	);
 
 	if (!edit) {
 		return (
 			<div className="flex items-center gap-3">
-				<h2 className="font-bold">
+				<h2 className="font-bold text-accent">
 					S{scene.number}
 					{scene.title && (
-						<span className="ml-2 font-normal text-gray-600">
-							{scene.title}
-						</span>
+						<span className="ml-2 font-normal text-ink">{scene.title}</span>
 					)}
 				</h2>
 				{addShot}
@@ -57,7 +51,7 @@ export function SceneHeader({
 
 	return (
 		<div className="flex items-center gap-2">
-			<span className="font-bold">S</span>
+			<span className="font-bold text-accent">S</span>
 			<InlineField
 				label="シーン番号"
 				value={scene.number}
