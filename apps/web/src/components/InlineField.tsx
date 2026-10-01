@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isImeComposing } from "./ime";
 import { fieldClass } from "./ui/field";
 
 /**
@@ -44,7 +45,9 @@ export function InlineField({
 			onChange={(e) => setDraft(e.target.value)}
 			onBlur={commit}
 			onKeyDown={(e) => {
-				if (e.key === "Enter") e.currentTarget.blur();
+				// 変換確定の Enter で確定しない（変換中に blur すると打っている文字が消える。issue #9）
+				if (e.key === "Enter" && !isImeComposing(e.nativeEvent))
+					e.currentTarget.blur();
 			}}
 			className={`${fieldClass()} ${className}`}
 		/>
