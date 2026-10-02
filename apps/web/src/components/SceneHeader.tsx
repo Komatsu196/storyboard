@@ -55,7 +55,8 @@ export function SceneHeader({
 				required
 				maxLength={20}
 				onCommit={(number) => onCommit({ number })}
-				className="w-16 font-bold"
+				// スマホ幅で 4 つのアイコンと並んでもタイトル欄が残るよう、番号欄は狭く・余白を詰める（T-033。「1-2」が収まる幅）
+				className="w-12 px-2! font-bold"
 			/>
 			<InlineField
 				label="シーンのタイトル"
