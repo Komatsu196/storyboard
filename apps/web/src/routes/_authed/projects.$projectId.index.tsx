@@ -131,6 +131,7 @@ function ProjectPage() {
 						<SceneHeader
 							scene={scene}
 							onAddShot={() => addShot.mutate(scene.id)}
+							onCommit={(input) => structure.updateScene(scene.id, input)}
 							disabled={busy}
 							edit={
 								editing
@@ -139,8 +140,6 @@ function ProjectPage() {
 											isLast: i === project.scenes.length - 1,
 											onMove: (delta) => structure.moveScene(scene.id, delta),
 											onDelete: () => structure.deleteScene(scene),
-											onCommit: (input) =>
-												structure.updateScene(scene.id, input),
 											disabled: structure.deleting,
 										}
 									: undefined
