@@ -9,6 +9,7 @@ import type {
 } from "../../shared/schemas";
 import {
 	insertSceneAfter,
+	insertShotAfter,
 	moveScene as moveSceneInCache,
 	moveShot as moveShotInCache,
 	removeProjectFromList,
@@ -23,6 +24,7 @@ import {
 	deleteScene,
 	deleteShot,
 	duplicateScene,
+	duplicateShot,
 	patchProject,
 	patchScene,
 	projectQuery,
@@ -43,7 +45,7 @@ type OrderRequest =
  * - 並べ替えと名前の変更は、キャッシュを先に書き換えてから送る（楽観的更新）。失敗したら巻き戻さずに作品を取り直す。
  * - 並べ替えは scope で直列に流し、連打しても最後の並びが最後に届くようにする。
  * - 削除は confirm() の後に送り、成功したらキャッシュから除く。
- * - シーンの複製（T-033）は並べ替えと同じ scope で流し（どちらも位置を書き換える）、成功したら元のすぐ後ろに差し込む。
+ * - シーン・カットの複製（T-033 / T-034）は並べ替えと同じ scope で流し（どちらも位置を書き換える）、成功したら元のすぐ後ろに差し込む。
  */
 export function useStructureMutations(projectId: string) {
 	const queryClient = useQueryClient();
@@ -71,6 +73,14 @@ export function useStructureMutations(projectId: string) {
 		mutationFn: duplicateScene,
 		onSuccess: (copy, sourceId) =>
 			insertSceneAfter(queryClient, projectId, sourceId, copy),
+		onError: failed("複製に失敗しました"),
+	});
+
+	const shotDuplicate = useMutation({
+		scope: { id: `order:${projectId}` },
+		mutationFn: duplicateShot,
+		onSuccess: (copy, sourceId) =>
+			insertShotAfter(queryClient, projectId, sourceId, copy),
 		onError: failed("複製に失敗しました"),
 	});
 
@@ -149,6 +159,10 @@ export function useStructureMutations(projectId: string) {
 		duplicateScene: (sceneId: string) => {
 			setError(null);
 			sceneDuplicate.mutate(sceneId);
+		},
+		duplicateShot: (shotId: string) => {
+			setError(null);
+			shotDuplicate.mutate(shotId);
 		},
 		renameProject: (title: string) => updateProjectFields({ title }),
 		changeAspectRatio: (aspectRatio: AspectRatio) =>

@@ -159,6 +159,7 @@ function ProjectPage() {
 									? {
 											onMove: (shotId, delta) =>
 												structure.moveShot(scene.id, shotId, delta),
+											onDuplicate: structure.duplicateShot,
 											onDelete: structure.deleteShot,
 											disabled: structure.deleting,
 										}
