@@ -14,10 +14,14 @@ type Props = {
 	onChange: (fields: ShotFields) => void;
 	/** 項目からフォーカスが外れたとき（親が自動保存の flush に使う） */
 	onBlur: () => void;
+	/** 「このカットを複製」（T-032）。送信・遷移は親が持つ */
+	onDuplicate: () => void;
 	/** 「このカットを削除」（T-023）。確認・送信・遷移は親が持つ */
 	onDelete: () => void;
-	deleting: boolean;
-	deleteError: string | null;
+	/** 複製か削除を送っている間は、どちらも押せない */
+	busy: boolean;
+	/** 複製・削除の失敗（フォームの下に 1 行） */
+	actionError: string | null;
 };
 
 const inputClass = `${fieldClass()} w-full`;
@@ -42,9 +46,10 @@ export function ShotForm({
 	fields,
 	onChange,
 	onBlur,
+	onDuplicate,
 	onDelete,
-	deleting,
-	deleteError,
+	busy,
+	actionError,
 }: Props) {
 	const set = <K extends keyof ShotFields>(key: K, value: ShotFields[K]) =>
 		onChange({ ...fields, [key]: value });
@@ -150,18 +155,16 @@ export function ShotForm({
 				/>
 			</Field>
 
-			<div className="mt-4 flex flex-col gap-1">
-				<Button
-					variant="danger"
-					onClick={onDelete}
-					disabled={deleting}
-					className="self-start"
-				>
+			<div className="mt-4 flex flex-col items-start gap-2">
+				<Button onClick={onDuplicate} disabled={busy}>
+					このカットを複製
+				</Button>
+				<Button variant="danger" onClick={onDelete} disabled={busy}>
 					このカットを削除
 				</Button>
-				{deleteError && (
+				{actionError && (
 					<p role="alert" className="text-danger text-sm">
-						{deleteError}
+						{actionError}
 					</p>
 				)}
 			</div>
