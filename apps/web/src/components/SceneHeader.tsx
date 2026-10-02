@@ -4,6 +4,7 @@ import type { UpdateScene } from "../../shared/schemas";
 import type { Scene } from "../api/client";
 import { InlineField } from "./InlineField";
 import { ItemActions } from "./ItemActions";
+import { isImeComposing } from "./ime";
 import { Button } from "./ui/Button";
 import { fieldClass } from "./ui/field";
 
@@ -142,8 +143,8 @@ function TitleEditor({
 				onChange={(e) => setDraft(e.target.value)}
 				onBlur={onBlur}
 				onKeyDown={(e) => {
-					// 日本語入力の変換中の Enter（確定）・Esc（取り消し）では閉じない
-					if (e.nativeEvent.isComposing) return;
+					// 日本語入力の変換中の Enter（確定）・Esc（取り消し）では閉じない（issue #9）
+					if (isImeComposing(e.nativeEvent)) return;
 					if (e.key === "Enter") e.currentTarget.blur();
 					if (e.key === "Escape") {
 						cancelRef.current = true;
