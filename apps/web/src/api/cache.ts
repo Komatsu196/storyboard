@@ -51,6 +51,47 @@ export function appendShot(
 	}));
 }
 
+/** 配列の id の項目のすぐ後ろに item を入れる。見つからなければ引数の配列そのものを返す */
+function insertAfter<T extends { id: string }>(
+	items: T[],
+	id: string,
+	item: T,
+): T[] {
+	const i = items.findIndex((x) => x.id === id);
+	return i < 0
+		? items
+		: [...items.slice(0, i + 1), item, ...items.slice(i + 1)];
+}
+
+/** シーンの複製（T-033）の応答を、元のシーンのすぐ後ろに差し込む */
+export function insertSceneAfter(
+	queryClient: QueryClient,
+	projectId: string,
+	sourceId: string,
+	scene: Scene,
+): void {
+	updateProject(queryClient, projectId, (p) => ({
+		...p,
+		scenes: insertAfter(p.scenes, sourceId, scene),
+	}));
+}
+
+/** カットの複製（T-032）の応答を、同じシーンの元のカットのすぐ後ろに差し込む */
+export function insertShotAfter(
+	queryClient: QueryClient,
+	projectId: string,
+	sourceId: string,
+	shot: Shot,
+): void {
+	updateProject(queryClient, projectId, (p) => ({
+		...p,
+		scenes: p.scenes.map((s) => {
+			const shots = insertAfter(s.shots, sourceId, shot);
+			return shots === s.shots ? s : { ...s, shots };
+		}),
+	}));
+}
+
 /** エディタのストローク確定・保存完了のたびに呼び、作品ページのサムネイルを最新にする */
 export function setShotSketch(
 	queryClient: QueryClient,

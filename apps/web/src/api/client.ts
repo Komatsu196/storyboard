@@ -196,6 +196,20 @@ export async function deleteShot(id: string): Promise<void> {
 	if (res.status !== 204) throw new Error(`delete shot: ${res.status}`);
 }
 
+/** 複製（T-032）。元のすぐ後ろに入ったコピー（スケッチ付き）を返す */
+export async function duplicateShot(id: string): Promise<Shot> {
+	const res = await api.shots[":id"].duplicate.$post({ param: { id } });
+	if (res.status !== 201) throw new Error(`duplicate shot: ${res.status}`);
+	return res.json();
+}
+
+/** 複製（T-033）。元のすぐ後ろに入ったコピー（カット付き）を返す */
+export async function duplicateScene(id: string): Promise<Scene> {
+	const res = await api.scenes[":id"].duplicate.$post({ param: { id } });
+	if (res.status !== 201) throw new Error(`duplicate scene: ${res.status}`);
+	return res.json();
+}
+
 /** 並べ替え（T-017）。兄弟の ids を新しい並び順で全部送る */
 export async function putSceneOrder(
 	projectId: string,

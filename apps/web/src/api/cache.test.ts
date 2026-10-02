@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
+	insertSceneAfter,
+	insertShotAfter,
 	moveScene,
 	moveShot,
 	removeProjectFromList,
@@ -15,6 +17,7 @@ import {
 	type ProjectDetail,
 	projectQuery,
 	projectsQuery,
+	type Scene,
 	type Shot,
 } from "./client";
 
@@ -93,5 +96,34 @@ describe("remove / set fields", () => {
 		expect(list().map((p) => p.title)).toEqual(["New", "Q"]);
 		removeProjectFromList(qc, "p");
 		expect(list().map((p) => p.id)).toEqual(["q"]);
+	});
+});
+
+describe("insertSceneAfter / insertShotAfter", () => {
+	it("inserts a scene right after the source", () => {
+		const { qc, detail } = setup();
+		const copy = { id: "s1c", number: "1-2", title: "", shots: [] };
+		insertSceneAfter(qc, "p", "s1", copy as unknown as Scene);
+		expect(detail().scenes.map((s) => s.id)).toEqual(["s1", "s1c", "s2"]);
+	});
+
+	it("inserts a shot right after the source in its scene", () => {
+		const { qc, detail } = setup();
+		insertShotAfter(qc, "p", "a", shot("a2"));
+		expect(detail().scenes[0]?.shots.map((s) => s.id)).toEqual([
+			"a",
+			"a2",
+			"b",
+			"c",
+		]);
+		expect(detail().scenes[1]?.shots).toEqual([]);
+	});
+
+	it("leaves the cache unchanged when the source is not there", () => {
+		const { qc, detail } = setup();
+		const before = detail();
+		insertSceneAfter(qc, "p", "nope", { id: "x" } as unknown as Scene);
+		insertShotAfter(qc, "p", "nope", shot("x"));
+		expect(detail()).toEqual(before);
 	});
 });

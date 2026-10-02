@@ -141,6 +141,7 @@ function ProjectPage() {
 											isFirst: i === 0,
 											isLast: i === project.scenes.length - 1,
 											onMove: (delta) => structure.moveScene(scene.id, delta),
+											onDuplicate: () => structure.duplicateScene(scene.id),
 											onDelete: () => structure.deleteScene(scene),
 											disabled: structure.deleting,
 										}
@@ -158,6 +159,7 @@ function ProjectPage() {
 									? {
 											onMove: (shotId, delta) =>
 												structure.moveShot(scene.id, shotId, delta),
+											onDuplicate: structure.duplicateShot,
 											onDelete: structure.deleteShot,
 											disabled: structure.deleting,
 										}

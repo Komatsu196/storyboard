@@ -13,9 +13,15 @@ import {
 	toAspectRatio,
 } from "../../../shared/schemas";
 import { emptySketch, type SketchData } from "../../../shared/sketch/types";
-import { removeShot, setShotFields, setShotSketch } from "../../api/cache";
+import {
+	insertShotAfter,
+	removeShot,
+	setShotFields,
+	setShotSketch,
+} from "../../api/cache";
 import {
 	deleteShot,
+	duplicateShot,
 	type ProjectDetail,
 	patchShot,
 	projectQuery,
@@ -128,7 +134,28 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 	});
 	const onDelete = () => {
 		if (!window.confirm(shotDeleteMessage(fields.number))) return;
+		duplication.reset();
 		removal.mutate();
+	};
+
+	// 「このカットを複製」（T-032）。保留中の自動保存を送り切ってから（直前の入力・ストロークまで写すため）複製し、
+	// 元のカットのすぐ後ろに差し込んでコピーの編集画面へ移る
+	const duplication = useMutation({
+		mutationFn: async () => {
+			await Promise.all([sketchSave.flush(), fieldsSave.flush()]);
+			return duplicateShot(shot.id);
+		},
+		onSuccess: (copy) => {
+			insertShotAfter(queryClient, project.id, shot.id, copy);
+			return navigate({
+				to: "/projects/$projectId/shots/$shotId",
+				params: { projectId: project.id, shotId: copy.id },
+			});
+		},
+	});
+	const onDuplicate = () => {
+		removal.reset();
+		duplication.mutate();
 	};
 
 	return (
@@ -200,9 +227,16 @@ function ShotEditor({ project, shot }: { project: ProjectDetail; shot: Shot }) {
 					fields={fields}
 					onChange={setFields}
 					onBlur={() => void fieldsSave.flush()}
+					onDuplicate={onDuplicate}
 					onDelete={onDelete}
-					deleting={removal.isPending}
-					deleteError={removal.isError ? "削除に失敗しました" : null}
+					busy={duplication.isPending || removal.isPending}
+					actionError={
+						removal.isError
+							? "削除に失敗しました"
+							: duplication.isError
+								? "複製に失敗しました"
+								: null
+					}
 				/>
 			</aside>
 		</div>

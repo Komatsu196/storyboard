@@ -22,3 +22,22 @@ export function sameIdSet(
 	if (set.size !== ids.length || ids.length !== current.length) return false;
 	return current.every((id) => set.has(id));
 }
+
+/** number の入力の上限（shared/schemas の番号と同じ） */
+const NUMBER_MAX = 20;
+
+/**
+ * 複製したカット・シーンの番号（T-033）。末尾の「-数字」を外した土台に -2, -3… を付け、兄弟で使われていない最小のものを返す。
+ * 上限の文字数を超えるときは元の番号のまま（後で 7 項目まとめて保存するとき検証で弾かれないように）
+ */
+export function duplicateNumber(
+	source: string,
+	siblings: readonly string[],
+): string {
+	const base = source.trim().replace(/-\d+$/, "");
+	const used = new Set(siblings.map((n) => n.trim()));
+	let k = 2;
+	while (used.has(`${base}-${k}`)) k++;
+	const next = `${base}-${k}`;
+	return next.length > NUMBER_MAX ? source.trim() : next;
+}

@@ -12,12 +12,13 @@ export type SceneEdit = {
 	isFirst: boolean;
 	isLast: boolean;
 	onMove: (delta: Delta) => void;
+	onDuplicate: () => void;
 	onDelete: () => void;
 	disabled?: boolean;
 };
 
 /**
- * シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、同じ行の右端に 上・下・✕ のアイコンが出る（T-017 / T-018 / T-021）。
+ * シーン見出し。edit があるとき（編集モード）は番号・タイトルが入力欄になり、同じ行の右端に 上・下・複製・✕ のアイコンが出る（T-017 / T-018 / T-021 / T-033）。
  * 編集モード中は「＋カット」を出さない（シーンの操作とカットの操作を見分けやすくするため）。
  * 通常モードでは見出しをタップするとタイトルだけがその場の入力欄になり、「＋カット」の位置に「保存」が出る（T-030）
  */
@@ -54,7 +55,8 @@ export function SceneHeader({
 				required
 				maxLength={20}
 				onCommit={(number) => onCommit({ number })}
-				className="w-16 font-bold"
+				// スマホ幅で 4 つのアイコンと並んでもタイトル欄が残るよう、番号欄は狭く・余白を詰める（T-033。「1-2」が収まる幅）
+				className="w-12 px-2! font-bold"
 			/>
 			<InlineField
 				label="シーンのタイトル"
@@ -69,6 +71,7 @@ export function SceneHeader({
 				isFirst={edit.isFirst}
 				isLast={edit.isLast}
 				onMove={edit.onMove}
+				onDuplicate={edit.onDuplicate}
 				onDelete={edit.onDelete}
 				disabled={edit.disabled}
 			/>

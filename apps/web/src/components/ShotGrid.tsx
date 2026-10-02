@@ -6,13 +6,14 @@ import { ShotCard } from "./ShotCard";
 
 export type ShotEdit = {
 	onMove: (shotId: string, delta: Delta) => void;
+	onDuplicate: (shotId: string) => void;
 	onDelete: (shot: Shot) => void;
 	disabled?: boolean;
 };
 
 /**
  * カットの一覧。スマホ 1 列（横並びカード）、PC 3〜5 列（設計書 §5.4）。カードの形は ShotCard が持つ。
- * edit があるとき（編集モード）はカードの下に 前へ / 後へ / カットを削除 を出す（T-017 / T-021）
+ * edit があるとき（編集モード）はカードの下に 前へ / 後へ / 複製 / 削除 を出す（T-017 / T-021 / T-034）
  */
 export function ShotGrid({
 	projectId,
@@ -44,6 +45,7 @@ export function ShotGrid({
 								isFirst={i === 0}
 								isLast={i === shots.length - 1}
 								onMove={(delta) => edit.onMove(shot.id, delta)}
+								onDuplicate={() => edit.onDuplicate(shot.id)}
 								onDelete={() => edit.onDelete(shot)}
 								disabled={edit.disabled}
 							/>
