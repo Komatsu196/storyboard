@@ -1,11 +1,12 @@
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { updateShotSchema } from "../../shared/schemas";
-import { sketchDataSchema } from "../../shared/sketch/types";
+import { type SketchData, sketchDataSchema } from "../../shared/sketch/types";
 import { createDb } from "../db";
 import { shots, sketches } from "../db/schema";
+import { duplicateNumber } from "../numbering";
 import { validationHook } from "../validate";
 
 export const shotRoutes = new Hono<{ Bindings: Env }>()
@@ -57,6 +58,68 @@ export const shotRoutes = new Hono<{ Bindings: Env }>()
 			return c.body(null, 204);
 		},
 	)
+	// 複製（T-032）。元のすぐ後ろに 7 項目（番号を除く）とスケッチを写したカットを作り、後ろのカットを 1 つずつずらす
+	.post("/:id/duplicate", async (c) => {
+		const id = c.req.param("id");
+		const db = createDb(c.env.DB);
+		const [siblings, sketchRows] = await db.batch([
+			db
+				.select()
+				.from(shots)
+				.where(
+					inArray(
+						shots.sceneId,
+						db
+							.select({ sceneId: shots.sceneId })
+							.from(shots)
+							.where(eq(shots.id, id)),
+					),
+				),
+			db.select().from(sketches).where(eq(sketches.shotId, id)),
+		]);
+		const source = siblings.find((s) => s.id === id);
+		if (!source) return c.json({ error: "not_found" as const }, 404);
+		const sketch = sketchRows[0];
+		const now = new Date().toISOString();
+		const row: typeof shots.$inferSelect = {
+			...source,
+			id: crypto.randomUUID(),
+			position: source.position + 1,
+			number: duplicateNumber(
+				source.number,
+				siblings.map((s) => s.number),
+			),
+			createdAt: now,
+			updatedAt: now,
+		};
+		// 1 つの batch で書く（D1 の batch は原子的）
+		await db.batch([
+			db
+				.update(shots)
+				.set({ position: sql`${shots.position} + 1` })
+				.where(
+					and(
+						eq(shots.sceneId, source.sceneId),
+						gt(shots.position, source.position),
+					),
+				),
+			db.insert(shots).values(row),
+			...(sketch
+				? [
+						db
+							.insert(sketches)
+							.values({ shotId: row.id, data: sketch.data, updatedAt: now }),
+					]
+				: []),
+		]);
+		return c.json(
+			{
+				...row,
+				sketch: sketch ? (JSON.parse(sketch.data) as SketchData) : null,
+			},
+			201,
+		);
+	})
 	// 物理削除。スケッチは ON DELETE CASCADE で消える
 	.delete("/:id", async (c) => {
 		const row = await createDb(c.env.DB)

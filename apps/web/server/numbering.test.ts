@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nextNumber, nextPosition, sameIdSet } from "./numbering";
+import {
+	duplicateNumber,
+	nextNumber,
+	nextPosition,
+	sameIdSet,
+} from "./numbering";
 
 describe("nextNumber", () => {
 	it("uses the largest leading integer + 1", () => {
@@ -37,5 +42,34 @@ describe("sameIdSet", () => {
 		expect(sameIdSet(["a", "b", "c"], ["a", "b"])).toBe(false);
 		expect(sameIdSet(["a", "x"], ["a", "b"])).toBe(false);
 		expect(sameIdSet(["a", "a"], ["a", "b"])).toBe(false);
+	});
+});
+
+describe("duplicateNumber", () => {
+	it("appends -2 to the source number", () => {
+		expect(duplicateNumber("3", ["1", "2", "3", "4"])).toBe("3-2");
+		expect(duplicateNumber("2A", ["2A"])).toBe("2A-2");
+	});
+
+	it("picks the smallest unused suffix", () => {
+		expect(duplicateNumber("3", ["3", "3-2"])).toBe("3-3");
+		expect(duplicateNumber("3", ["3", "3-3"])).toBe("3-2");
+	});
+
+	it("strips a trailing -digits from the source before counting", () => {
+		expect(duplicateNumber("3-2", ["3", "3-2"])).toBe("3-3");
+		expect(duplicateNumber("3-2", ["3-2"])).toBe("3-3");
+	});
+
+	it("compares the siblings trimmed", () => {
+		expect(duplicateNumber(" 3 ", ["3", " 3-2 "])).toBe("3-3");
+	});
+
+	it("keeps the source number when the result would exceed 20 characters", () => {
+		const long = "1234567890123456789";
+		expect(duplicateNumber(long, [long])).toBe(long);
+		expect(duplicateNumber("123456789012345678", ["123456789012345678"])).toBe(
+			"123456789012345678-2",
+		);
 	});
 });
