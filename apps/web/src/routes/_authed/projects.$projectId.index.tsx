@@ -61,7 +61,8 @@ function ProjectPage() {
 
 	return (
 		<main className="p-4 pb-24 md:pb-4">
-			<header className="mb-4 flex items-center gap-2">
+			{/* ページ上部はスクロールしても上端に残す（T-031）。高さを h-16 に固定し、シーン見出しはその下（top-16）に貼り付く */}
+			<header className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 flex h-16 items-center gap-2 border-line border-b bg-canvas px-4">
 				<Link
 					to="/"
 					className={`${buttonClass({ variant: "ghost" })} shrink-0`}
@@ -124,10 +125,11 @@ function ProjectPage() {
 			{project.scenes.map((scene, i) => (
 				<section
 					key={scene.id}
-					className="mb-4 overflow-hidden rounded-xl border border-line bg-surface"
+					className="mb-4 overflow-clip rounded-xl border border-line bg-surface"
 				>
-					{/* シーン見出しはカード上端の帯（T-025）。帯の色は差し色の薄い藍（D-017） */}
-					<div className="border-line border-b bg-accent-soft px-3 py-2">
+					{/* シーン見出しはカード上端の帯（T-025）。帯の色は差し色の薄い藍（D-017）。
+					    そのシーンが見えている間はページ上部の下に貼り付く（T-031。sticky を効かせるためカードは overflow-hidden ではなく overflow-clip） */}
+					<div className="sticky top-16 z-10 border-line border-b bg-accent-soft px-3 py-2">
 						<SceneHeader
 							scene={scene}
 							onAddShot={() => addShot.mutate(scene.id)}
@@ -203,7 +205,7 @@ function ProjectPage() {
 				aria-label="＋カット"
 				onClick={() => addShot.mutate(undefined)}
 				disabled={busy}
-				className="fixed right-4 bottom-4 shadow-lg md:hidden"
+				className="fixed right-4 bottom-4 z-30 shadow-lg md:hidden"
 			>
 				カット
 			</Button>
