@@ -2,6 +2,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { logout, projectsQuery } from "../../api/client";
+import { ChangePasswordButton } from "../../components/PasswordDialog";
 import { NewProjectButton } from "../../components/ProjectDialog";
 import { Button } from "../../components/ui/Button";
 
@@ -56,6 +57,7 @@ function Home() {
 					))}
 				</ul>
 			)}
+			<ChangePasswordButton />
 		</main>
 	);
 }

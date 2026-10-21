@@ -1,6 +1,8 @@
 import type { Context } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
+import { createDb } from "./db";
+import { auth } from "./db/schema";
 
 export const SESSION_COOKIE = "session";
 export const SESSION_TTL_SEC = 90 * 24 * 60 * 60;
@@ -66,9 +68,40 @@ export async function verifyPassword(
 	return timingSafeEqual(actual, fromBase64Url(hashStr));
 }
 
-export async function startSession(c: Context, secret: string): Promise<void> {
+/** 今のパスワードのハッシュ。D1 の auth の行を優先し、なければ Secret を使う（T-035） */
+export async function currentPasswordHash(env: Env): Promise<string> {
+	const row = await createDb(env.DB)
+		.select({ passwordHash: auth.passwordHash })
+		.from(auth)
+		.get();
+	return row?.passwordHash ?? env.PASSWORD_HASH;
+}
+
+export async function savePasswordHash(env: Env, hash: string): Promise<void> {
+	const updatedAt = new Date().toISOString();
+	await createDb(env.DB)
+		.insert(auth)
+		.values({ id: 1, passwordHash: hash, updatedAt })
+		.onConflictDoUpdate({
+			target: auth.id,
+			set: { passwordHash: hash, updatedAt },
+		});
+}
+
+/** ハッシュのソルト部分。パスワードを変えるたびに変わるので、Cookie の世代として使う（T-036） */
+function saltOf(stored: string): string {
+	return stored.split("$")[2] ?? "";
+}
+
+/** Cookie の値は「有効期限.今のハッシュのソルト」 */
+export async function startSession(
+	c: Context,
+	secret: string,
+	passwordHash: string,
+): Promise<void> {
 	const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC;
-	await setSignedCookie(c, SESSION_COOKIE, String(exp), secret, {
+	const value = `${exp}.${saltOf(passwordHash)}`;
+	await setSignedCookie(c, SESSION_COOKIE, value, secret, {
 		httpOnly: true,
 		// http://localhost では Secure を付けない（Safari が Secure Cookie を捨てるため）
 		secure: c.req.url.startsWith("https:"),
@@ -85,16 +118,23 @@ export function endSession(c: Context): void {
 export async function hasValidSession(
 	c: Context,
 	secret: string,
+	passwordHash: string,
 ): Promise<boolean> {
 	const value = await getSignedCookie(c, secret, SESSION_COOKIE);
 	if (!value) return false;
-	const exp = Number(value);
-	return Number.isFinite(exp) && exp > Math.floor(Date.now() / 1000);
+	const [expStr, salt] = value.split(".");
+	const exp = Number(expStr);
+	return (
+		Number.isFinite(exp) &&
+		exp > Math.floor(Date.now() / 1000) &&
+		salt === saltOf(passwordHash)
+	);
 }
 
 export const requireSession = createMiddleware<{ Bindings: Env }>(
 	async (c, next) => {
-		if (!(await hasValidSession(c, c.env.SESSION_SECRET))) {
+		const passwordHash = await currentPasswordHash(c.env);
+		if (!(await hasValidSession(c, c.env.SESSION_SECRET, passwordHash))) {
 			return c.json({ error: "unauthorized" }, 401);
 		}
 		await next();
