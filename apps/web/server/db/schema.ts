@@ -56,3 +56,10 @@ export const sketches = sqliteTable("sketches", {
 	data: text("data").notNull(),
 	updatedAt: text("updated_at").notNull(),
 });
+
+/** パスワードのハッシュを置く 1 行だけのテーブル（id は 1 固定）。行がなければ Secret の PASSWORD_HASH を使う（T-035） */
+export const auth = sqliteTable("auth", {
+	id: integer("id").primaryKey(),
+	passwordHash: text("password_hash").notNull(),
+	updatedAt: text("updated_at").notNull(),
+});
