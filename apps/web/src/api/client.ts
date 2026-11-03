@@ -99,6 +99,20 @@ export async function logout(): Promise<void> {
 	await api.logout.$post();
 }
 
+/** 今のパスワードが違えば "wrong_password"。成功するとこの端末の Cookie は出し直される（T-036） */
+export async function changePassword(input: {
+	current: string;
+	next: string;
+}): Promise<"ok" | "wrong_password"> {
+	const res = await api.password.$post({ json: input });
+	if (res.status === 204) return "ok";
+	if (res.status === 400) {
+		const body = (await res.json()) as { error?: string };
+		if (body.error === "wrong_password") return "wrong_password";
+	}
+	throw new Error(`change password: ${res.status}`);
+}
+
 export async function createProject(input: {
 	title: string;
 	aspectRatio: AspectRatio;
